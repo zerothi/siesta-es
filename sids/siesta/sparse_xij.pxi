@@ -29,7 +29,7 @@ cdef inline double i_mult_d(int i,double d) nogil: return (<double>i)*d
 cdef inline double i_mult_f(int i,float d) nogil: return (<float>i)*d
 
 @cython.profile(False)
-@cython.boundscheck(True)
+@cython.boundscheck(False)
 def get_isupercells(np.ndarray[DINT_t] tm not None):
     cdef int i, x, y, z
     cdef np.ndarray[DINT_t, ndim=2] off = np.empty(((2*tm[0]+1)*(2*tm[1]+1)*(2*tm[2]+1),3),dtype=DINT)
@@ -222,12 +222,30 @@ cdef inline int tm_same(int[:] tm1, int[:] tm2) nogil:
     return 1
 
 @cython.profile(False)
-@cython.cdivision(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef inline int offset_is(int[:] tm,int[:] tm2, int[:] ctm) nogil:
+    cdef int i
+    if ctm[2] > 0:
+        i = 0
+    elif ctm[1] > 0 and ctm[2] == 0:
+        i = 0
+    elif ctm[0] >= 0 and ctm[1] == 0 and ctm[2] == 0:
+        if ctm[0] == 0: return 0
+        i = 0
+    else:
+        i = 1
+    i = i + (ctm[2] + tm[2]) * tm2[1] * tm2[0]
+    i = i + (ctm[1] + tm[1]) * tm2[0]
+    return i + ctm[0] + tm[0]
+
+@cython.profile(False)
 @cython.boundscheck(False)
 def list_col_correct(np.ndarray[DDOUBLE_t, ndim=2, mode='c'] rcell not None,
                      int no_u, int nnzs,
                      np.ndarray[DINT_t,    ndim=1, mode='c'] l_col not None,
                      np.ndarray[DDOUBLE_t, ndim=2, mode='c'] xij not None,
+                     np.ndarray[DINT_t,    ndim=1, mode='c'] tm not None,
                      np.ndarray[DINT_t,    ndim=2, mode='c'] off not None):
 
     # views of inputs
@@ -236,6 +254,8 @@ def list_col_correct(np.ndarray[DDOUBLE_t, ndim=2, mode='c'] rcell not None,
     cdef double[:] rcellz = rcell[2,:]
     cdef int[:] l_colv = l_col
     cdef double[:,::1] xijv = xij
+    cdef int[:] tmv = tm
+    cdef int[:] tm2v = tm * 2 + 1
     cdef int[:,::1] offv = off
 
     cdef double[:] xv
@@ -250,22 +270,18 @@ def list_col_correct(np.ndarray[DDOUBLE_t, ndim=2, mode='c'] rcell not None,
         ctm[0] = nint(xorcell(xv,rcellx))
         ctm[1] = nint(xorcell(xv,rcelly))
         ctm[2] = nint(xorcell(xv,rcellz))
-        si = l_colv[ind] / no_u # supercell index
-        if tm_same(ctm,offv[si]) != 0: continue
         # We need to find the correct supercell index
-            # AND correct l_col
-        for si in xrange(n_s):
-            if tm_same(ctm,offv[si]) != 0:
-                l_colv[ind] = si * no_u + l_colv[ind] % no_u
-                break
+        # AND correct l_col
+        si = offset_is(tmv,tm2v,ctm)
+        l_colv[ind] = si * no_u + l_colv[ind] % no_u
 
 @cython.profile(False)
-@cython.cdivision(True)
 @cython.boundscheck(False)
 def list_col_correctf(np.ndarray[DDOUBLE_t, ndim=2, mode='c'] rcell not None,
                      int no_u, int nnzs, 
                      np.ndarray[DINT_t,     ndim=1, mode='c'] l_col not None,
                      np.ndarray[DFLOAT_t,   ndim=2, mode='c'] xij not None,
+                     np.ndarray[DINT_t,     ndim=1, mode='c'] tm not None,
                      np.ndarray[DINT_t,     ndim=2, mode='c'] off not None):
 
     # views of inputs
@@ -274,6 +290,8 @@ def list_col_correctf(np.ndarray[DDOUBLE_t, ndim=2, mode='c'] rcell not None,
     cdef double[:] rcellz = rcell[2,:]
     cdef int[:] l_colv = l_col
     cdef float[:,::1] xijv = xij
+    cdef int[:] tmv = tm
+    cdef int[:] tm2v = tm * 2 + 1
     cdef int[:,::1] offv = off
 
     cdef float[:] xv
@@ -286,11 +304,7 @@ def list_col_correctf(np.ndarray[DDOUBLE_t, ndim=2, mode='c'] rcell not None,
         ctm[0] = nint(xorcellf(xv,rcellx))
         ctm[1] = nint(xorcellf(xv,rcelly))
         ctm[2] = nint(xorcellf(xv,rcellz))
-        si = l_colv[ind] / no_u # supercell index
-        if tm_same(ctm,offv[si]) == 1: continue
         # We need to find the correct supercell index
         # AND correct l_col
-        for si in xrange(n_s):
-            if tm_same(ctm,offv[si]) == 1:
-                l_colv[ind] = si * no_u + l_colv[ind] % no_u
-                break
+        si = offset_is(tmv,tm2v,ctm)
+        l_colv[ind] = si * no_u + l_colv[ind] % no_u

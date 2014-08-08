@@ -86,7 +86,7 @@ class SiestaHamilton(_sim.SimulationFile,_es.Hamiltonian):
         # Correct list_col (create the correct supercell index)
         spar.list_col_correct(self.rcell, self.no, self.nnzs, 
                               self.list_col, self.xij, 
-                              ioffset)
+                              tm, ioffset)
     
 class HSX(SiestaHamilton):
     """ The HSX file that contains the Hamiltonian, overlap and
