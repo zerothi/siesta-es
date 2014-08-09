@@ -4,12 +4,7 @@ import sys
 
 def configuration(parent_package='',top_path=None):
     from numpy.distutils.misc_util import Configuration
-    config = Configuration('sids',parent_package,top_path)
-    config.add_subpackage('helper')
-    config.add_subpackage('es')
-    config.add_subpackage('k')
-    config.add_subpackage('siesta')
-    #config.make_config_py()
+    config = Configuration('k',parent_package,top_path)
     return config
 
 if __name__ == '__main__':

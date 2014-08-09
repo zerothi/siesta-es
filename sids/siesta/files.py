@@ -5,6 +5,7 @@ A module that defines all SIESTA files known
 import sids.simulation as _sim
 import sids.siesta.io as _sio
 import sids.es as _es
+import sids.k as _k
 import numpy as _np
 import scipy.sparse as _spar
 import sparse as spar
@@ -18,7 +19,7 @@ class SiestaHamilton(_sim.SimulationFile,_es.Hamiltonian):
         k-point"""
         
         # convert k-point to current cell size
-        tk = _es.PI2 * _np.dot(k,self.rcell)
+        tk = _k.PI2 * _np.dot(k,self.rcell)
         if name is None:
             return spar.todense_off(tk,self.no,
                                  self.n_col,self.list_ptr,self.list_col,
@@ -147,7 +148,7 @@ class SiestaDensityMatrix(_sim.SimulationFile):
         k-point"""
         
         # convert k-point to current cell size
-        tk = _es.PI2 * _np.dot(k,self.rcell)
+        tk = _k.PI2 * _np.dot(k,self.rcell)
         if name is None:
             return spar.todense_off(tk,self.no,
                                  self.n_col,self.list_ptr,self.list_col,

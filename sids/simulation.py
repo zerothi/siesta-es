@@ -130,11 +130,11 @@ class RuleFile(object):
     """ 
     Rule for obtaining information about the current simulation.
     """
-    def __init__(self,obj=None,**kwargs):
+    def __init__(self,**kwargs):
         """ Initialize a new file rule
 
         Parameters
- ----------
+        ==========
 
         obj : the object creator
         ext : search files through the extension of the file
@@ -157,9 +157,14 @@ class RuleFile(object):
             self.custom = kwargs.pop('custom')
         # this class is used as an initialization routine
         # when creating the file
-        self.obj = obj
-        if self.obj is None:
-            raise SimulationFileError("Rule has not been passed a class")
+        self.obj = None
+        self.routine = None
+        if 'obj' in kwargs:
+            self.obj = kwargs.pop('obj')
+        elif 'routine' in kwargs:
+            self.routine = kwargs.pop('routine')
+        if self.obj is None and self.routine is None:
+            raise SimulationFileError("Rule has not been passed a class/routine")
 
     def is_file(self,path):
         """
@@ -179,7 +184,11 @@ class RuleFile(object):
         """ Creates the file dependent on the rule
         I.e. initializes it from the class contained.
         """
-        return self.obj(path,rule=self,sim=sim)
+        try:
+            return self.obj(path,rule=self,sim=sim)
+        except:
+            return self.routine(path)
+
 
                 
 

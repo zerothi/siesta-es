@@ -7,8 +7,6 @@ import numpy as _np
 import scipy.linalg as _dlin
 import scipy.sparse.linalg as _slin
 
-PI2 = _np.pi * 2.
-
 class Hamiltonian(object):
     """
     Object for retaining information about the Hamiltonian matrix.
@@ -70,3 +68,29 @@ class Hamiltonian(object):
             return _slin.eigvalsh(H,**def_opts)
             
         
+    def bandstructure(self,kpath):
+        """ Calculates the bandstructure of the Hamiltonian
+        by passing a kpath. """
+
+        es = _np.empty((kpath.nk,self.no),_np.float)
+
+        i = 0
+        for k in kpath.k:
+            # Calculate eigenvalues
+            es[i,:] = self.eigs(k=k)
+            i += 1
+        return es
+
+    def plot_bandstructure(self,kpath,Emin=None,Emax=None,axis=None):
+        """ Plots the bandstructure of this Hamiltonian
+        You can specify the ranges you wish to populate.
+        """
+        es = self.bandstructure(kpath)
+        import matplotlib.pyplot as plt
+        if axis is None:
+            f,axis = plt.subplots()
+        axis.plot(_np.arange(kpath.nk),es)
+        kpath.set_plot_label(axis.xaxis)
+        axis.set_ylim([Emin,Emax])
+        return es,axis
+

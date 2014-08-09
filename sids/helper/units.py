@@ -32,11 +32,13 @@ deg    = pi / 180.
 
 _ConversionTable = {
     'mass' : {
+        'DEFAULT' : _def_M,
         'kg' : 1.,
         'g'  : 1.e-3,
         'amu': 1.66054e-27,
         }, 
     'length' : {
+        'DEFAULT' : _def_L,
         'm'    : 1., 
         'cm'   : 0.01, 
         'nm'   : 1.e-9, 
@@ -44,12 +46,14 @@ _ConversionTable = {
         'Bohr' : 0.529177e-10, 
         }, 
     'time' : {
+        'DEFAULT' : _def_t,
         's'  : 1. ,
         'fs' : 1.e-15 ,
         'ps' : 1.e-12 ,
         'ns' : 1.e-9 ,
         },
     'energy' : {
+        'DEFAULT' : _def_E,
         'J'       : 1., 
         'erg'     : 1.e-7, 
         'eV'      : 1.60219e-19, 
@@ -66,6 +70,7 @@ _ConversionTable = {
         'cm^-1'   : 1.986e-23,
         },
     'force' : {
+        'DEFAULT' : _def_f,
         'N'       : 1.,
         'eV/Ang'  : 1.60219e-9,
         'eV/Bohr' : 1.60219e-9*0.529177,
@@ -180,7 +185,7 @@ def AtomZ(atom): return __atom[atom]['Z']
 
 
 # Here we start the unit type conversion library
-class UnknownUnitTypeError(Error):
+class UnknownUnitTypeError(Exception):
     """
     Error raised when unittype of a unit cannot be found.
     """
@@ -216,7 +221,7 @@ def UnitType(unit):
                 pass
     raise UnknownUnitTypeError('The unit "'+str(k)+'" could not be located in the table.')
 
-class UnknownUnitError(Error):
+class UnknownUnitError(Exception):
     """
     Error raised when a unit cannot be found.
     """
