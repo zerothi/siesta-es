@@ -468,7 +468,6 @@ class Units(object):
     # Unit-object needs to handle this....
     # TODO consider the conversion of a list of Unit-objects via the Units-object.
 
-
 class UnitObject(object):
     """
     Contains relevant information about units etc.
@@ -495,14 +494,14 @@ class UnitObject(object):
             if not u.variable:
                 for self_u in self._units:
                     if self_u.type() == u.type():
-                        self.__dict__['_'+self_u.variable] *= self_u.convert(u)
+                        self.__dict__[self_u.variable] *= self_u.convert(u)
                         
         # Now convert the specific requested units.
         for unit in units:
             u = Unit(unit)
             self_u = self.unit(u.variable)
             if self_u:
-                self.__dict__['_'+self_u.variable] *= self_u.convert(u)
+                self.__dict__[self_u.variable] *= self_u.convert(u)
 
     def unit(self,variable):
         """ Returns the unit that is associated with the variable """
@@ -532,9 +531,10 @@ class Variable_ndarray(_np.ndarray):
         # Go back in the units variable does not exist.
         if not '_units' in self.__dict__: return
 
-        # If it is a Units object, we can simply loop and do the recursive conversion.
+        # If it is a Units object, 
+        # we can simply loop and do the recursive conversion.
         if isinstance(unit,Units):
-            for u in unit:
+            for u in unit: 
                 self.convert(u)
             return
 
@@ -546,6 +546,10 @@ class Variable_ndarray(_np.ndarray):
         for i in self._units:
             if i.type() == u.type():
                 self[:] *= i.convert(u)
+
+    def add_unit(self,var,unit):
+        """ Adds a unit to a variable beloning to the object """
+        
 
     def unit(self,variable='self'):
         """ Returns the unit that is associated with the variable """

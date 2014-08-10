@@ -2,6 +2,7 @@
 Electronic structure code which handles the Hamiltonian
 """
 import numpy as _np
+import sids.helper.units as _unit
 
 # Import scipy linear algebra routines
 import scipy.linalg as _dlin

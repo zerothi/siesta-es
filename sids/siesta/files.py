@@ -1,37 +1,76 @@
 """
 A module that defines all SIESTA files known
 """
+from copy import deepcopy
 
 import sids.simulation as _sim
 import sids.siesta.io as _sio
 import sids.es as _es
+import sids.helper.units as _unit
 import sids.k as _k
 import numpy as _np
 import scipy.sparse as _spar
 import sparse as spar
 
-class SiestaHamilton(_sim.SimulationFile,_es.Hamiltonian):
-    """ A wrapper class to ease the construction of several
-    Hamiltonian formats.
+class SparseMatrix(_sim.SimulationFile):
+    """ 
+    A wrapper class for the sparsity matrices in siesta
     """
-    def todense(self,k=_np.zeros((3,),_np.float64),E=None,spin=0,name=None):
+
+    def _todense(self,k,m1,m2=None):
         """ Returns a dense matrix of this Hamiltonian at the specified
         k-point"""
         
         # convert k-point to current cell size
         tk = _k.PI2 * _np.dot(k,self.rcell)
+        if m2 is None:
+            return spar.todense_off(tk,self.no,
+                                 self.n_col,self.list_ptr,self.list_col,
+                                 self.offset,m1)
+        else:
+            return spar.todense_off(tk,self.no,
+                                 self.n_col,self.list_ptr,self.list_col,
+                                 self.offset,m1,m2)
+
+    def _correct_sparsity(self):
+        """ 
+        Corrects the xij array and utilizes offsets instead.
+        """
+        # Correct the xij array (remove xa[j]-xa[i])
+        spar.xij_correct(self.na, self.xa, self.lasto,
+                         self.no, self.n_col, self.list_ptr, self.list_col,
+                         self.xij)
+
+        # get transfer matrix sizes
+        tm = spar.xij_sc(self.rcell,self.nnzs,self.xij)
+
+        # The supercell offsets (in Ang)
+        self.offset = spar.get_supercells(self.cell, tm)
+
+        # Get the integer offsets for all supercells
+        ioffset = spar.get_isupercells(tm)
+
+        # Correct list_col (create the correct supercell index)
+        spar.list_col_correct(self.rcell, self.no, self.nnzs, 
+                              self.list_col, self.xij, 
+                              tm, ioffset)
+
+class Hamiltonian(SparseMatrix,_es.Hamiltonian):
+    """ A wrapper class to ease the construction of several
+    Hamiltonian formats.
+    """
+    # Default units (we convert in the FORTRAN routines)
+    _UNITS = _unit.Units('H','eV','xij','Ang')
+
+    def todense(self,k=_np.zeros((3,),_np.float64),spin=0,name=None):
+        """ Returns a dense matrix of this Hamiltonian at the specified
+        k-point"""
         if name is None:
-            return spar.todense_off(tk,self.no,
-                                 self.n_col,self.list_ptr,self.list_col,
-                                 self.offset,self.H[spin,:],self.S)
+            return self._todense(k,self.H[spin,:],self.S)
         elif name == 'H':
-            return spar.todense_off(tk,self.no,
-                                 self.n_col,self.list_ptr,self.list_col,
-                                 self.offset,self.H[spin,:])
+            return self._todense(k,self.H[spin,:])
         elif name == 'S':
-            return spar.todense_off(tk,self.no,
-                                 self.n_col,self.list_ptr,self.list_col,
-                                 self.offset,self.S)
+            return self._todense(k,self.S)
         else:
             raise Exception("Error in name")
 
@@ -66,30 +105,8 @@ class SiestaHamilton(_sim.SimulationFile,_es.Hamiltonian):
         del xij
         self.xij.shape = (self.nnzs,3)
         # Done reading in information
-
-    def _correct_sparsity(self):
-        """ Corrects the xij array and utilizes offsets
-        instead."""
-        # Correct the xij array (remove xa[j]-xa[i])
-        spar.xij_correct(self.na, self.xa, self.lasto,
-                         self.no, self.n_col, self.list_ptr, self.list_col,
-                         self.xij)
-
-        # get transfer matrix sizes
-        tm = spar.xij_sc(self.rcell,self.nnzs,self.xij)
-
-        # The supercell offsets (in Ang)
-        self.offset = spar.get_supercells(self.cell, tm)
-
-        # Get the integer offsets for all supercells
-        ioffset = spar.get_isupercells(tm)
-
-        # Correct list_col (create the correct supercell index)
-        spar.list_col_correct(self.rcell, self.no, self.nnzs, 
-                              self.list_col, self.xij, 
-                              tm, ioffset)
     
-class HSX(SiestaHamilton):
+class HSX(Hamiltonian):
     """ The HSX file that contains the Hamiltonian, overlap and
     xij
     """
@@ -97,9 +114,8 @@ class HSX(SiestaHamilton):
         """ Initialization of the HSX file data type
         """
         self.init_HSxij(_sio.read_hsx_header,_sio.read_hsx)
-    
 
-class HS(SiestaHamilton):
+class HS(Hamiltonian):
     """ The HS file that contains the Hamiltonian, overlap and
     xij
     """
@@ -108,10 +124,12 @@ class HS(SiestaHamilton):
         """
         self.init_HSxij(_sio.read_hs_header,_sio.read_hs)
 
-class TSHS(SiestaHamilton):
+class TSHS(Hamiltonian):
     """ The TSHS file that contains the Hamiltonian, overlap and
     xij
     """
+    _UNITS = _unit.Units('H','eV','cell','Ang',
+                   'xa','Ang','Ef','eV')
     def init_file(self):
         """ Initialization of the TSHS file data type
         """
@@ -138,34 +156,23 @@ class TSHS(SiestaHamilton):
         self._correct_sparsity()
         del self.xij            
 
-
-class SiestaDensityMatrix(_sim.SimulationFile):
+class DensityMatrix(SparseMatrix):
     """ A wrapper class to ease the construction of several
     Hamiltonian formats.
     """
-    def todense(self,k=_np.zeros((3,),_np.float64),spin=0,name=None):
+    def todense(self,k=_np.zeros((3,),_np.float64),spin=0,name='D'):
         """ Returns a dense matrix of this Hamiltonian at the specified
         k-point"""
-        
-        # convert k-point to current cell size
-        tk = _k.PI2 * _np.dot(k,self.rcell)
         if name is None:
-            return spar.todense_off(tk,self.no,
-                                 self.n_col,self.list_ptr,self.list_col,
-                                 self.offset,self.DM[spin,:],self.EM)
-        elif name == 'DM' or name == 'D':
-            return spar.todense_off(tk,self.no,
-                                 self.n_col,self.list_ptr,self.list_col,
-                                 self.offset,self.DM[spin,:])
-        elif name == 'EM' or name == 'E':
-            return spar.todense_off(tk,self.no,
-                                 self.n_col,self.list_ptr,self.list_col,
-                                 self.offset,self.EM)
+            return self._todense(k,self.DM[spin,:],self.EM)
+        elif name in ['DM','D']:
+            return self._todense(k,self.DM[spin,:])
+        elif name in ['EM','E']:
+            return self._todense(k,self.EM)
         else:
             raise Exception("Error in name")
 
-
-class DM(SiestaDensityMatrix):
+class DM(DensityMatrix):
     """The density matrix file
     """
     def init_file(self):

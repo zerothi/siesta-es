@@ -13,13 +13,13 @@ cdef inline int iaorb(int io,int na_u, int[:] lasto) nogil:
 
 @cython.profile(False)
 @cython.boundscheck(False)
-cdef inline double xorcell(double[:] xij, double[:] rcell) nogil:
-    return xij[0]*rcell[0] + xij[1]*rcell[1] + xij[2]*rcell[2]
+cdef inline double xorcell(double x,double y, double z, double[:] rcell) nogil:
+    return x*rcell[0] + x*rcell[1] + z*rcell[2]
 
 @cython.profile(False)
 @cython.boundscheck(False)
-cdef inline double xorcellf(float[:] xij, double[:] rcell) nogil:
-    return (<double>xij[0])*rcell[0] + (<double>xij[1])*rcell[1] + (<double>xij[2])*rcell[2]
+cdef inline double xorcellf(float x, float y, float z, double[:] rcell) nogil:
+    return (<double>x)*rcell[0] + (<double>y)*rcell[1] + (<double>z)*rcell[2]
 
 @cython.profile(False)
 @cython.boundscheck(False)
@@ -167,16 +167,14 @@ def xij_sc(np.ndarray[DDOUBLE_t, ndim=2, mode='c'] rcell not None,
     cdef np.ndarray[DINT_t] tm = np.zeros((3,),dtype=DINT)
     cdef int[:] tmv = tm
 
-    cdef double[:] xv
     cdef int xc
 
     for ind in xrange(nnzs):
-        xv = xijv[ind]
-        xc = abs(nint(xorcell(xv,rcellx)))
+        xc = abs(nint(xorcell(xijv[ind,0],xijv[ind,1],xijv[ind,2],rcellx)))
         if xc > tmv[0]: tmv[0] = xc
-        xc = abs(nint(xorcell(xv,rcelly)))
+        xc = abs(nint(xorcell(xijv[ind,0],xijv[ind,1],xijv[ind,2],rcelly)))
         if xc > tmv[1]: tmv[1] = xc
-        xc = abs(nint(xorcell(xv,rcellz)))
+        xc = abs(nint(xorcell(xijv[ind,0],xijv[ind,1],xijv[ind,2],rcellz)))
         if xc > tmv[2]: tmv[2] = xc
 
     return tm
@@ -198,16 +196,14 @@ def xij_scf(np.ndarray[DDOUBLE_t, ndim=2, mode='c'] rcell not None,
     cdef np.ndarray[DINT_t] tm = np.zeros((3,),dtype=DINT)
     cdef int[:] tmv = tm
 
-    cdef float[:] xv
     cdef int xc
 
     for ind in xrange(nnzs):
-        xv = xijv[ind]
-        xc = abs(nint(xorcellf(xv,rcellx)))
+        xc = abs(nint(xorcellf(xijv[ind,0],xijv[ind,1],xijv[ind,2],rcellx)))
         if xc > tmv[0]: tmv[0] = xc
-        xc = abs(nint(xorcellf(xv,rcelly)))
+        xc = abs(nint(xorcellf(xijv[ind,0],xijv[ind,1],xijv[ind,2],rcelly)))
         if xc > tmv[1]: tmv[1] = xc
-        xc = abs(nint(xorcellf(xv,rcellz)))
+        xc = abs(nint(xorcellf(xijv[ind,0],xijv[ind,1],xijv[ind,2],rcellz)))
         if xc > tmv[2]: tmv[2] = xc
     return tm
 
@@ -258,18 +254,14 @@ def list_col_correct(np.ndarray[DDOUBLE_t, ndim=2, mode='c'] rcell not None,
     cdef int[:] tm2v = tm * 2 + 1
     cdef int[:,::1] offv = off
 
-    cdef double[:] xv
     cdef int n_s = len(off[:,0])
     cdef int ind, si
     cdef int[:] ctm = np.empty((3,),dtype=DINT)
 
     for ind in xrange(nnzs):
-        # Overhead of returning a new memory view
-        # is better than doing it 3 times
-        xv = xijv[ind]
-        ctm[0] = nint(xorcell(xv,rcellx))
-        ctm[1] = nint(xorcell(xv,rcelly))
-        ctm[2] = nint(xorcell(xv,rcellz))
+        ctm[0] = nint(xorcell(xijv[ind,0],xijv[ind,1],xijv[ind,2],rcellx))
+        ctm[1] = nint(xorcell(xijv[ind,0],xijv[ind,1],xijv[ind,2],rcelly))
+        ctm[2] = nint(xorcell(xijv[ind,0],xijv[ind,1],xijv[ind,2],rcellz))
         # We need to find the correct supercell index
         # AND correct l_col
         si = offset_is(tmv,tm2v,ctm)
@@ -294,16 +286,14 @@ def list_col_correctf(np.ndarray[DDOUBLE_t, ndim=2, mode='c'] rcell not None,
     cdef int[:] tm2v = tm * 2 + 1
     cdef int[:,::1] offv = off
 
-    cdef float[:] xv
     cdef int n_s = len(off[:,0])
     cdef int ind, si
     cdef int[:] ctm = np.empty((3,),dtype=DINT)
 
     for ind in xrange(nnzs):
-        xv = xijv[ind]
-        ctm[0] = nint(xorcellf(xv,rcellx))
-        ctm[1] = nint(xorcellf(xv,rcelly))
-        ctm[2] = nint(xorcellf(xv,rcellz))
+        ctm[0] = nint(xorcellf(xijv[ind,0],xijv[ind,1],xijv[ind,2],rcellx))
+        ctm[1] = nint(xorcellf(xijv[ind,0],xijv[ind,1],xijv[ind,2],rcelly))
+        ctm[2] = nint(xorcellf(xijv[ind,0],xijv[ind,1],xijv[ind,2],rcellz))
         # We need to find the correct supercell index
         # AND correct l_col
         si = offset_is(tmv,tm2v,ctm)

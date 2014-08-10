@@ -2,9 +2,9 @@
 
 # Create inline code for calculating phase
 @cython.profile(False)
-cdef inline float complex f_ph(float[:] k, float[:] xij) nogil:
+cdef inline float complex f_ph(float[:] k, float x, float y, float z) nogil:
      cdef float complex zz
-     cdef float ph = k[0]*xij[0]+k[1]*xij[1]+k[2]*xij[2]
+     cdef float ph = k[0]*x+k[1]*y+k[2]*z
      # Cast numbers
      zz.real = cosf(ph)
      zz.imag = sinf(ph)
@@ -40,7 +40,7 @@ def todense1_float(int is_gamma, int no_u,
         for io in xrange(no_u):
             for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
                 jo = l_colv[ind] % no_u
-                ik = f_ph(kv,xv[ind,:])
+                ik = f_ph(kv,xv[ind,0],xv[ind,1],xv[ind,2])
                 dv[io,jo].real = dv[io,jo].real + ik.real * mv[ind]
                 dv[io,jo].imag = dv[io,jo].imag + ik.imag * mv[ind]
     else:
@@ -84,7 +84,7 @@ def todense2_float(int is_gamma, int no_u,
         for io in xrange(no_u):
             for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
                 jo = l_colv[ind] % no_u
-                ik = f_ph(kv,xv[ind,:])
+                ik = f_ph(kv,xv[ind,0],xv[ind,1],xv[ind,2])
                 d1v[io,jo].real = d1v[io,jo].real + ik.real * m1v[ind]
                 d1v[io,jo].imag = d1v[io,jo].imag + ik.imag * m1v[ind]
                 d2v[io,jo].real = d2v[io,jo].real + ik.real * m2v[ind]
@@ -115,7 +115,7 @@ def todense1_float_off(int is_gamma, int no_u,
     cdef float[:] mv = m
     cdef float[:,::1] offv = off
 
-    cdef int io, jo, ind
+    cdef int io, jo, ind, si
     cdef float complex ik
     # Create views
     cdef float[:] kv = k
@@ -127,7 +127,8 @@ def todense1_float_off(int is_gamma, int no_u,
         for io in xrange(no_u):
             for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
                 jo = l_colv[ind] % no_u
-                ik = f_ph(kv,offv[l_colv[ind] / no_u])
+                si = l_colv[ind] / no_u
+                ik = f_ph(kv,offv[si,0],offv[si,1],offv[si,2])
                 dv[io,jo].real = dv[io,jo].real + ik.real * mv[ind]
                 dv[io,jo].imag = dv[io,jo].imag + ik.imag * mv[ind]
     else:
@@ -157,7 +158,7 @@ def todense2_float_off(int is_gamma, int no_u,
     cdef float[:] m1v = m1
     cdef float[:] m2v = m2
 
-    cdef int io, jo, ind
+    cdef int io, jo, ind, si
     cdef float complex ik
     # Create views
     cdef float[:] kv = k
@@ -171,7 +172,8 @@ def todense2_float_off(int is_gamma, int no_u,
         for io in xrange(no_u):
             for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
                 jo = l_colv[ind] % no_u
-                ik = f_ph(kv,offv[l_colv[ind] / no_u])
+                si = l_colv[ind] / no_u
+                ik = f_ph(kv,offv[si,0],offv[si,1],offv[si,2])
                 d1v[io,jo].real = d1v[io,jo].real + ik.real * m1v[ind]
                 d1v[io,jo].imag = d1v[io,jo].imag + ik.imag * m1v[ind]
                 d2v[io,jo].real = d2v[io,jo].real + ik.real * m2v[ind]

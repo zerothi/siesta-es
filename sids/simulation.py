@@ -4,11 +4,13 @@ Utility for importing DFT directories
 
 """
 
+from copy import deepcopy
 import os.path as _osp
 import glob as _glob
+import sids.helper.units as _unit
 
 # A class wrapper to be used for DFT-sub-modules
-class Simulation(object):
+class Simulation(_unit.UnitObject):
     """
     Object container for DFT simulations
 
@@ -18,6 +20,8 @@ class Simulation(object):
     instead
     
     """
+    _UNITS = _unit.Units()
+
     def __init__(self,rules=None,**kwargs):
         """
         Initialize a new directory [DFTDir] which then
@@ -25,11 +29,38 @@ class Simulation(object):
         """
         # We do not force any of the variables in the
         # container
-        if 'files' in kwargs: self._files = kwargs['files']
-        if 'path' in kwargs: self._path = kwargs['path']
+        if 'files' in kwargs: 
+            self._files = kwargs['files']
+        else:
+            self._files = {}
+        if 'path' in kwargs: 
+            self._path = kwargs['path']
         self._rules = rules # a list of rules
-        self._files = {} # type: file
+        # Start by coping units over (init_simulation
+        # can add that in another way
+        self._units = deepcopy(self._UNITS)
         self.init_simulation()
+
+    def add_var(self,name,var,unit=None):
+        """ Add a variable by name, variable and possible unit """
+        if name in self.__dict__:
+            raise SimulationError("Variable already existing in simulation.")
+        self.__dict__[name] = var
+        if unit:
+            self._units.append(_unit.Unit(name,unit))
+    
+    # We override the UnitObject convert routine
+    def convert(self,unit):
+        """ Simulation conversion of units runs through all files
+        and converts them """
+        # first convert all sitting units
+        _unit.UnitObject.convert(self,unit)
+        for fo in self._files:
+            if isinstance(self._files[fo],list):
+                for f in fo:
+                    f.convert(unit)
+            else:
+                self._files[fo].convert(unit)
 
     def add_file(self,path):
         """ Adds a simulation file to the current simulation """
@@ -90,10 +121,12 @@ class SimulationError(Exception):
     """ Default error handler for simulations """
     pass
 
-class SimulationFile(object):
+class SimulationFile(_unit.UnitObject):
     """
     A DFT file which has some information attached.
     """
+    _UNITS = _unit.Units()
+
     def __init__(self,path,sim=None,**kwargs):
         """ Initialize a file under a DFT directory
         """
@@ -112,6 +145,10 @@ class SimulationFile(object):
         # DO NOT initialize
         # The file will be initialized upon requesting the
         # file from the simulation.
+
+        # If this object has a global entry (_UNITS)
+        # we will add that to _units
+        self._units = deepcopy(self._UNITS)
 
     # If an attribute does not exist on this object
     # check the parent simulation.
