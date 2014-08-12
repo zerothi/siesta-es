@@ -12,8 +12,8 @@ cdef inline int find_idx(int *col,int no,int find):
         if col[i] == find: return i
     raise ValueError("Could not find column in sparsity pattern")
 
-include "sparse_dense_float.pxi"
-include "sparse_dense_double.pxi"
+include "sparse_float.pxi"
+include "sparse_double.pxi"
 include "sparse_xij.pxi"
 
 @cython.profile(False)
