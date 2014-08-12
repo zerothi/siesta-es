@@ -22,11 +22,16 @@ class Hamiltonian(object):
                       accopanying the Hamilton. (i.e. non-orthogonal)
         """
         self.has_overlap = has_overlap
+        self.method = 'dense'
 
-    def eigs(self,k=_np.zeros((3,),_np.float64),method='dense',eigs=None,
+    def eigs(self,k=_np.zeros((3,),_np.float64),eigs=None,
              **kwargs):
         """ Return the eigenvalues of this Hamiltonian.
         """
+        try:
+            method = self.method
+        except:
+            method = 'dense'
         if method == 'dense':
             if eigs is None: eigs = self.no - 1
             if not isinstance(eigs,tuple):
@@ -55,9 +60,12 @@ class Hamiltonian(object):
             # eigvalsh will error out
             # The user must ensure a limited number of 
             # eigenvalues to be calculated
-            k = max(eigs[0],eigs[1])
-            def_opts = {'k' : k,
-                        'ncv' : k*3, 
+            if not isinstance(eigs,tuple):
+                neig = eigs
+            else:
+                neig = max(eigs[0],eigs[1])
+            def_opts = {'k' : neig,
+                        'ncv' : neig*3, 
                         'return_eigenvectors' : False,
                         }
             if self.has_overlap:
@@ -66,19 +74,20 @@ class Hamiltonian(object):
             else:
                 H = self.tosparse(k=k)
             def_opts.update(kwargs)
-            return _slin.eigvalsh(H,**def_opts)
+            return _slin.eigsh(H,**def_opts)
             
         
     def bandstructure(self,kpath):
         """ Calculates the bandstructure of the Hamiltonian
         by passing a kpath. """
 
-        es = _np.empty((kpath.nk,self.no),_np.float)
+        es = _np.zeros((kpath.nk,self.no),_np.float)
 
         i = 0
         for k in kpath.k:
             # Calculate eigenvalues
-            es[i,:] = self.eigs(k=k)
+            e = self.eigs(k=k)
+            es[i,:len(e)] = e
             i += 1
         return es
 

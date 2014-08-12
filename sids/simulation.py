@@ -40,14 +40,6 @@ class Simulation(_unit.UnitObject):
         # can add that in another way
         self._units = deepcopy(self._UNITS)
         self.init_simulation()
-
-    def add_var(self,name,var,unit=None):
-        """ Add a variable by name, variable and possible unit """
-        if name in self.__dict__:
-            raise SimulationError("Variable already existing in simulation.")
-        self.__dict__[name] = var
-        if unit:
-            self._units.append(_unit.Unit(name,unit))
     
     # We override the UnitObject convert routine
     def convert(self,unit):
@@ -68,8 +60,8 @@ class Simulation(_unit.UnitObject):
             #print("Trying: "+path+" with rule: "+rule.type)
             if rule.is_file(path):
                 #print("Found file: "+rule.type)
-                # Create the simulation file
-                fS = rule.create_file(path)
+                # Create the simulation file (with attached simulation)
+                fS = rule.create_file(path,sim=self)
                 t = rule.type
                 if t in self._files:
                     # We already have a same type
@@ -83,14 +75,24 @@ class Simulation(_unit.UnitObject):
                 pass
             pass
 
+    def add_var(self,name,var,unit=None,overwrite=False):
+        """ Add a variable by name, variable and possible unit """
+        if overwrite:
+            pass
+        elif name in self.__dict__:
+            raise SimulationError("Variable already existing in simulation.")
+        self.__dict__[name] = var
+        if unit:
+            self._units.append(_unit.Unit(name,unit))
+
     def add(self,nattr,attr,overwrite=False):
         """Extends the simulation with an attribute
         """
         if overwrite:
-            self.__dict__[nattr] = attr
-            return
-        if nattr in self.__dict__:
+            pass
+        elif nattr in self.__dict__:
             raise SimulationError("Attribute: "+nattr+" already exists.")
+        self.__dict__[nattr] = attr
 
     def init_simulation(self):
         """ Default simulation initializer

@@ -12,10 +12,64 @@ import numpy as _np
 import scipy.sparse as _spar
 import sparse as spar
 
+class SparseMatrixError(Exception):
+    """
+    Error handler for SIESTA sparse matrices
+    """
+    pass
+
 class SparseMatrix(_sim.SimulationFile):
     """ 
     A wrapper class for the sparsity matrices in siesta
     """
+
+    def _option(self,method='dense'):
+        """
+        Sets specific options that determines the working of this
+        sparse matrix.
+        
+        Parameters
+        ----------
+        method -- 'dense' or 'sparse' enables choice of algorithms used
+        """
+        self.method = method
+        if method == 'dense':
+            try:
+                del self.s_ptr
+                del self.s_col
+            except:
+                pass
+        elif method == 'sparse':
+            self.s_ptr, self.s_col = spar.sparse_uc(self.no, self.n_col, self.l_ptr,
+                                                    self.l_col)
+
+    def option(self,**opt):
+        """
+        Enables specification options set.
+        As this should be extendable we set this as a method to be overwritten by 
+        users.
+        Just remember to end your routine with "self._set(**opts)"
+        """
+        self._option(**opt)
+
+    def _tosparse(self,k,m1,m2=None):
+        """
+        Returns a csr sparse matrix at the specified k-point
+        """
+
+        if not hasattr(self,'s_ptr'):
+            raise SparseMatrixError("Sparse method have not been initialized, call self.set(method='sparse')")
+
+        # convert k-point to current cell size
+        tk = _k.PI2 * _np.dot(k,self.rcell)
+        if hasattr(self,'offset'):
+            return spar.tosparse_off(tk,self.no,
+                                     self.n_col,self.l_ptr,self.l_col,
+                                     self.offset,self.s_ptr,self.s_col,m1,m2)
+        else:
+            return spar.tosparse(tk,self.no,
+                                 self.n_col,self.l_ptr,self.l_col,
+                                 self.xij,self.s_ptr,self.s_col,m1,m2)
 
     def _todense(self,k,m1,m2=None):
         """ Returns a dense matrix of this Hamiltonian at the specified
@@ -23,14 +77,14 @@ class SparseMatrix(_sim.SimulationFile):
         
         # convert k-point to current cell size
         tk = _k.PI2 * _np.dot(k,self.rcell)
-        if m2 is None:
+        if hasattr(self,'offset'):
             return spar.todense_off(tk,self.no,
-                                 self.n_col,self.list_ptr,self.list_col,
-                                 self.offset,m1)
+                                    self.n_col,self.l_ptr,self.l_col,
+                                    self.offset,m1,m2)
         else:
-            return spar.todense_off(tk,self.no,
-                                 self.n_col,self.list_ptr,self.list_col,
-                                 self.offset,m1,m2)
+            return spar.todense(tk,self.no,
+                                self.n_col,self.l_ptr,self.l_col,
+                                self.xij,m1,m2)
 
     def _correct_sparsity(self):
         """ 
@@ -38,7 +92,7 @@ class SparseMatrix(_sim.SimulationFile):
         """
         # Correct the xij array (remove xa[j]-xa[i])
         spar.xij_correct(self.na, self.xa, self.lasto,
-                         self.no, self.n_col, self.list_ptr, self.list_col,
+                         self.no, self.n_col, self.l_ptr, self.l_col,
                          self.xij)
 
         # get transfer matrix sizes
@@ -52,7 +106,7 @@ class SparseMatrix(_sim.SimulationFile):
 
         # Correct list_col (create the correct supercell index)
         spar.list_col_correct(self.rcell, self.no, self.nnzs, 
-                              self.list_col, self.xij, 
+                              self.l_col, self.xij, 
                               tm, ioffset)
 
 class Hamiltonian(SparseMatrix,_es.Hamiltonian):
@@ -61,6 +115,18 @@ class Hamiltonian(SparseMatrix,_es.Hamiltonian):
     """
     # Default units (we convert in the FORTRAN routines)
     _UNITS = _unit.Units('H','eV','xij','Ang')
+
+    def tosparse(self,k=_np.zeros((3,),_np.float64),spin=0,name=None):
+        """ Returns a sparse matrix of this Hamiltonian at the specified
+        k-point"""
+        if name is None:
+            return self._tosparse(k,self.H[spin,:],self.S)
+        elif name == 'H':
+            return self._tosparse(k,self.H[spin,:])
+        elif name == 'S':
+            return self._tosparse(k,self.S)
+        else:
+            raise SparseMatrixError("Error in name")
 
     def todense(self,k=_np.zeros((3,),_np.float64),spin=0,name=None):
         """ Returns a dense matrix of this Hamiltonian at the specified
@@ -92,9 +158,9 @@ class Hamiltonian(SparseMatrix,_es.Hamiltonian):
         # Correct contiguous
         self.n_col = _np.require(n_col,requirements=['C','A'])
         del n_col
-        self.list_ptr = _np.require(list_ptr,requirements=['C','A'])
+        self.l_ptr = _np.require(list_ptr,requirements=['C','A'])
         del list_ptr
-        self.list_col = _np.require(list_col,requirements=['C','A']) - 1 # correct numpy indices
+        self.l_col = _np.require(list_col,requirements=['C','A']) - 1 # correct numpy indices
         del list_col
         self.H = _np.require(H.T,requirements=['C','A'])
         del H
@@ -142,15 +208,26 @@ class TSHS(Hamiltonian):
         del cell
         self.rcell = _np.linalg.inv(self.cell)
         try:
+            self.sim.add('na',self.na)
+        except: pass
+        try:
             # We add the cell size to the simulation
-            self.sim.add('cell',self.cell)
+            self.sim.add_var('cell',self.cell,self._units.unit('cell'))
+            self.sim.add('rcell',self.rcell)
         except: pass
         self.lasto, xa = \
             _sio.read_tshs_extra(self.file_path,na_u=self.na)
+        try:
+            self.sim.add('lasto',self.lasto)
+        except: pass
+        
         # Convert xa to C-array
         self.xa = _np.require(xa.T,requirements=['C','A'])
         self.xa.shape = (self.na,3)
         del xa
+        try:
+            self.sim.add_var('xa',self.xa,self._units.unit('xa'))
+        except: pass
 
         # create offsets 
         self._correct_sparsity()
@@ -185,9 +262,9 @@ class DM(DensityMatrix):
         # Correct contiguous
         self.n_col = _np.require(n_col,requirements=['C','A'])
         del n_col
-        self.list_ptr = _np.require(list_ptr,requirements=['C','A'])
+        self.l_ptr = _np.require(list_ptr,requirements=['C','A'])
         del list_ptr
-        self.list_col = _np.require(list_col,requirements=['C','A']) - 1 # correct numpy indices
+        self.l_col = _np.require(list_col,requirements=['C','A']) - 1 # correct numpy indices
         del list_col
         self.DM = _np.require(DM.T,requirements=['C','A'])
         del DM

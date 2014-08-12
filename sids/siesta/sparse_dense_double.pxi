@@ -10,9 +10,217 @@ cdef inline double complex d_ph(double[:] k,double x,double y,double z) nogil:
      zz.imag = sin(ph)
      return zz
 
-@cython.profile(False)
 @cython.cdivision(True)
-@cython.boundscheck(False)
+def tosparse1_double(int is_gamma, int no_u, 
+    np.ndarray[DINT_t,    ndim=1, mode='c'] n_col not None,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr not None,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_col not None,
+    np.ndarray[DDOUBLE_t, ndim=2, mode='c'] xij not None,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_ptr not None,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_col not None,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k not None,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m not None):
+
+    # views of inputs
+    cdef int[:] n_colv = n_col
+    cdef int[:] l_ptrv = l_ptr
+    cdef int[:] l_colv = l_col
+    cdef int[:] sp_ptrv = sp_ptr
+    cdef int[:] sp_colv = sp_col
+    cdef double[:,::1] xv = xij
+    cdef double[:] mv = m
+
+    cdef int io, jo, ind, n
+    cdef double complex ik
+    # Create views
+    cdef double[:] kv = k
+    cdef int *col_ptr
+
+    cdef np.ndarray[DC_DOUBLE_t] d = np.zeros([sp_ptr[no_u]], dtype=DC_DOUBLE)
+    cdef double complex[:] dv = d
+
+    if is_gamma == 0:
+        for io in xrange(no_u):
+            col_ptr = &sp_colv[sp_ptrv[io]]
+            n = sp_ptrv[io+1] - sp_ptrv[io]
+            for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
+                ik = d_ph(kv,xv[ind,0],xv[ind,1],xv[ind,2])
+                jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
+                dv[jo].real = dv[jo].real + ik.real * mv[ind]
+                dv[jo].imag = dv[jo].imag + ik.imag * mv[ind]
+    else:
+        for io in xrange(no_u):
+            col_ptr = &sp_colv[sp_ptrv[io]]
+            n = sp_ptrv[io+1] - sp_ptrv[io]
+            for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
+                jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
+                dv[jo].real = dv[jo].real + mv[ind]
+    return spar.csr_matrix((d,sp_col,sp_ptr),shape=(no_u,no_u),dtype=DC_DOUBLE)
+
+@cython.cdivision(True)
+def tosparse1_double_off(int is_gamma, int no_u, 
+    np.ndarray[DINT_t,    ndim=1, mode='c'] n_col not None,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr not None,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_col not None,
+    np.ndarray[DDOUBLE_t, ndim=2, mode='c'] off not None,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_ptr not None,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_col not None,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k not None,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m not None):
+
+    # views of inputs
+    cdef int[:] n_colv = n_col
+    cdef int[:] l_ptrv = l_ptr
+    cdef int[:] l_colv = l_col
+    cdef int[:] sp_ptrv = sp_ptr
+    cdef int[:] sp_colv = sp_col
+    cdef double[:,::1] offv = off
+    cdef double[:] mv = m
+
+    cdef int io, jo, ind, n, si
+    cdef double complex ik
+    # Create views
+    cdef double[:] kv = k
+    cdef int *col_ptr
+
+    cdef np.ndarray[DC_DOUBLE_t] d = np.zeros([sp_ptr[no_u]], dtype=DC_DOUBLE)
+    cdef double complex[:] dv = d
+
+    if is_gamma == 0:
+        for io in xrange(no_u):
+            col_ptr = &sp_colv[sp_ptrv[io]]
+            n = sp_ptrv[io+1] - sp_ptrv[io]
+            for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
+                si = l_colv[ind] / no_u
+                ik = d_ph(kv,offv[si,0],offv[si,1],offv[si,2])
+                jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
+                dv[jo].real = dv[jo].real + ik.real * mv[ind]
+                dv[jo].imag = dv[jo].imag + ik.imag * mv[ind]
+    else:
+        for io in xrange(no_u):
+            col_ptr = &sp_colv[sp_ptrv[io]]
+            n = sp_ptrv[io+1] - sp_ptrv[io]
+            for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
+                jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
+                dv[jo].real = dv[jo].real + mv[ind]
+    return spar.csr_matrix((d,sp_col,sp_ptr),shape=(no_u,no_u),dtype=DC_DOUBLE)
+
+
+@cython.cdivision(True)
+def tosparse2_double(int is_gamma, int no_u, 
+    np.ndarray[DINT_t,    ndim=1, mode='c'] n_col not None,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr not None,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_col not None,
+    np.ndarray[DDOUBLE_t, ndim=2, mode='c'] xij not None,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_ptr not None,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_col not None,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k not None,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m1 not None,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m2 not None):
+
+    # views of inputs
+    cdef int[:] n_colv = n_col
+    cdef int[:] l_ptrv = l_ptr
+    cdef int[:] l_colv = l_col
+    cdef int[:] sp_ptrv = sp_ptr
+    cdef int[:] sp_colv = sp_col
+    cdef double[:,::1] xv = xij
+    cdef double[:] m1v = m1
+    cdef double[:] m2v = m2
+
+    cdef int io, jo, ind, n
+    cdef double complex ik
+    # Create views
+    cdef double[:] kv = k
+    cdef int *col_ptr
+
+    cdef np.ndarray[DC_DOUBLE_t] d1 = np.zeros([sp_ptr[no_u]], dtype=DC_DOUBLE)
+    cdef np.ndarray[DC_DOUBLE_t] d2 = np.zeros([sp_ptr[no_u]], dtype=DC_DOUBLE)
+    cdef double complex[:] d1v = d1
+    cdef double complex[:] d2v = d2
+
+    if is_gamma == 0:
+        for io in xrange(no_u):
+            col_ptr = &sp_colv[sp_ptrv[io]]
+            n = sp_ptrv[io+1] - sp_ptrv[io]
+            for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
+                ik = d_ph(kv,xv[ind,0],xv[ind,1],xv[ind,2])
+                jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
+                d1v[jo].real = d1v[jo].real + ik.real * m1v[ind]
+                d1v[jo].imag = d1v[jo].imag + ik.imag * m1v[ind]
+                d2v[jo].real = d2v[jo].real + ik.real * m2v[ind]
+                d2v[jo].imag = d2v[jo].imag + ik.imag * m2v[ind]
+    else:
+        for io in xrange(no_u):
+            col_ptr = &sp_colv[sp_ptrv[io]]
+            n = sp_ptrv[io+1] - sp_ptrv[io]
+            for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
+                jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
+                d1v[jo].real = d1v[jo].real + m1v[ind]
+                d2v[jo].real = d2v[jo].real + m2v[ind]
+
+    return (spar.csr_matrix((d1,sp_col,sp_ptr),shape=(no_u,no_u),dtype=DC_DOUBLE),
+            spar.csr_matrix((d2,sp_col,sp_ptr),shape=(no_u,no_u),dtype=DC_DOUBLE))
+
+@cython.cdivision(True)
+def tosparse2_double_off(int is_gamma, int no_u, 
+    np.ndarray[DINT_t,    ndim=1, mode='c'] n_col not None,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr not None,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_col not None,
+    np.ndarray[DDOUBLE_t, ndim=2, mode='c'] off not None,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_ptr not None,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_col not None,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k not None,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m1 not None,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m2 not None):
+
+    # views of inputs
+    cdef int[:] n_colv = n_col
+    cdef int[:] l_ptrv = l_ptr
+    cdef int[:] l_colv = l_col
+    cdef int[:] sp_ptrv = sp_ptr
+    cdef int[:] sp_colv = sp_col
+    cdef double[:,::1] offv = off
+    cdef double[:] m1v = m1
+    cdef double[:] m2v = m2
+
+    cdef int io, jo, ind, si, n
+    cdef double complex ik
+    # Create views
+    cdef double[:] kv = k
+    cdef int *col_ptr
+
+    cdef np.ndarray[DC_DOUBLE_t] d1 = np.zeros([sp_ptr[no_u]], dtype=DC_DOUBLE)
+    cdef np.ndarray[DC_DOUBLE_t] d2 = np.zeros([sp_ptr[no_u]], dtype=DC_DOUBLE)
+    cdef double complex[:] d1v = d1
+    cdef double complex[:] d2v = d2
+
+    if is_gamma == 0:
+        for io in xrange(no_u):
+            col_ptr = &sp_colv[sp_ptrv[io]]
+            n = sp_ptrv[io+1] - sp_ptrv[io]
+            for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
+                si = l_colv[ind] / no_u
+                ik = d_ph(kv,offv[si,0],offv[si,1],offv[si,2])
+                jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
+                d1v[jo].real = d1v[jo].real + ik.real * m1v[ind]
+                d1v[jo].imag = d1v[jo].imag + ik.imag * m1v[ind]
+                d2v[jo].real = d2v[jo].real + ik.real * m2v[ind]
+                d2v[jo].imag = d2v[jo].imag + ik.imag * m2v[ind]
+    else:
+        for io in xrange(no_u):
+            col_ptr = &sp_colv[sp_ptrv[io]]
+            n = sp_ptrv[io+1] - sp_ptrv[io]
+            for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
+                jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
+                d1v[jo].real = d1v[jo].real + m1v[ind]
+                d2v[jo].real = d2v[jo].real + m2v[ind]
+
+    return (spar.csr_matrix((d1,sp_col,sp_ptr),shape=(no_u,no_u),dtype=DC_DOUBLE),
+            spar.csr_matrix((d2,sp_col,sp_ptr),shape=(no_u,no_u),dtype=DC_DOUBLE))
+
+
+@cython.cdivision(True)
 def todense1_double(int is_gamma, int no_u, 
     np.ndarray[DINT_t,    ndim=1, mode='c'] n_col not None,
     np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr not None,
@@ -50,9 +258,7 @@ def todense1_double(int is_gamma, int no_u,
                 dv[io,jo].real = dv[io,jo].real + mv[ind]
     return d
 
-@cython.profile(False)
 @cython.cdivision(True)
-@cython.boundscheck(False)
 def todense2_double(int is_gamma, int no_u, 
     np.ndarray[DINT_t,    ndim=1, mode='c'] n_col not None,
     np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr not None,
@@ -97,10 +303,7 @@ def todense2_double(int is_gamma, int no_u,
     return d1,d2
 
 
-
-@cython.profile(False)
 @cython.cdivision(True)
-@cython.boundscheck(False)
 def todense1_double_off(int is_gamma, int no_u, 
     np.ndarray[DINT_t,    ndim=1, mode='c'] n_col not None,
     np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr not None,
@@ -139,9 +342,8 @@ def todense1_double_off(int is_gamma, int no_u,
                 dv[io,jo].real = dv[io,jo].real + mv[ind]
     return d
 
-@cython.profile(False)
+
 @cython.cdivision(True)
-@cython.boundscheck(False)
 def todense2_double_off(int is_gamma, int no_u, 
     np.ndarray[DINT_t,    ndim=1, mode='c'] n_col not None,
     np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr not None,
