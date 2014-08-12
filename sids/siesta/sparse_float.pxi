@@ -22,11 +22,8 @@ def tosparse1_float(int is_gamma, int no_u,
     np.ndarray[DFLOAT_t, ndim=1, mode='c'] m not None):
 
     # views of inputs
-    cdef int[:] n_colv = n_col
-    cdef int[:] l_ptrv = l_ptr
-    cdef int[:] l_colv = l_col
-    cdef int[:] sp_ptrv = sp_ptr
-    cdef int[:] sp_colv = sp_col
+    cdef int[:] n_colv = n_col, l_ptrv = l_ptr, l_colv = l_col
+    cdef int[:] sp_ptrv = sp_ptr, sp_colv = sp_col
     cdef float[:,::1] xv = xij
     cdef float[:] mv = m
 
@@ -69,11 +66,8 @@ def tosparse1_float_off(int is_gamma, int no_u,
     np.ndarray[DFLOAT_t, ndim=1, mode='c'] m not None):
 
     # views of inputs
-    cdef int[:] n_colv = n_col
-    cdef int[:] l_ptrv = l_ptr
-    cdef int[:] l_colv = l_col
-    cdef int[:] sp_ptrv = sp_ptr
-    cdef int[:] sp_colv = sp_col
+    cdef int[:] n_colv = n_col, l_ptrv = l_ptr, l_colv = l_col
+    cdef int[:] sp_ptrv = sp_ptr, sp_colv = sp_col
     cdef float[:,::1] offv = off
     cdef float[:] mv = m
 
@@ -119,14 +113,10 @@ def tosparse2_float(int is_gamma, int no_u,
     np.ndarray[DFLOAT_t, ndim=1, mode='c'] m2 not None):
 
     # views of inputs
-    cdef int[:] n_colv = n_col
-    cdef int[:] l_ptrv = l_ptr
-    cdef int[:] l_colv = l_col
-    cdef int[:] sp_ptrv = sp_ptr
-    cdef int[:] sp_colv = sp_col
+    cdef int[:] n_colv = n_col, l_ptrv = l_ptr, l_colv = l_col
+    cdef int[:] sp_ptrv = sp_ptr, sp_colv = sp_col
     cdef float[:,::1] xv = xij
-    cdef float[:] m1v = m1
-    cdef float[:] m2v = m2
+    cdef float[:] m1v = m1, m2v = m2
 
     cdef int io, jo, ind, n
     cdef float complex ik
@@ -136,8 +126,7 @@ def tosparse2_float(int is_gamma, int no_u,
 
     cdef np.ndarray[DC_FLOAT_t] d1 = np.zeros([sp_ptr[no_u]], dtype=DC_FLOAT)
     cdef np.ndarray[DC_FLOAT_t] d2 = np.zeros([sp_ptr[no_u]], dtype=DC_FLOAT)
-    cdef float complex[:] d1v = d1
-    cdef float complex[:] d2v = d2
+    cdef float complex[:] d1v = d1, d2v = d2
 
     if is_gamma == 0:
         for io in xrange(no_u):
@@ -176,14 +165,10 @@ def tosparse2_float_off(int is_gamma, int no_u,
     np.ndarray[DFLOAT_t, ndim=1, mode='c'] m2 not None):
 
     # views of inputs
-    cdef int[:] n_colv = n_col
-    cdef int[:] l_ptrv = l_ptr
-    cdef int[:] l_colv = l_col
-    cdef int[:] sp_ptrv = sp_ptr
-    cdef int[:] sp_colv = sp_col
+    cdef int[:] n_colv = n_col, l_ptrv = l_ptr, l_colv = l_col
+    cdef int[:] sp_ptrv = sp_ptr, sp_colv = sp_col
     cdef float[:,::1] offv = off
-    cdef float[:] m1v = m1
-    cdef float[:] m2v = m2
+    cdef float[:] m1v = m1, m2v = m2
 
     cdef int io, jo, ind, si, n
     cdef float complex ik
@@ -193,8 +178,7 @@ def tosparse2_float_off(int is_gamma, int no_u,
 
     cdef np.ndarray[DC_FLOAT_t] d1 = np.zeros([sp_ptr[no_u]], dtype=DC_FLOAT)
     cdef np.ndarray[DC_FLOAT_t] d2 = np.zeros([sp_ptr[no_u]], dtype=DC_FLOAT)
-    cdef float complex[:] d1v = d1
-    cdef float complex[:] d2v = d2
+    cdef float complex[:] d1v = d1, d2v = d2
 
     if is_gamma == 0:
         for io in xrange(no_u):
@@ -230,9 +214,7 @@ def todense1_float(int is_gamma, int no_u,
     np.ndarray[DFLOAT_t, ndim=1, mode='c'] m not None):
 
     # views of inputs
-    cdef int[:] n_colv = n_col
-    cdef int[:] l_ptrv = l_ptr
-    cdef int[:] l_colv = l_col
+    cdef int[:] n_colv = n_col, l_ptrv = l_ptr, l_colv = l_col
     cdef float[:,::1] xv = xij
     cdef float[:] mv = m
 
@@ -269,12 +251,9 @@ def todense2_float(int is_gamma, int no_u,
     np.ndarray[DFLOAT_t, ndim=1, mode='c'] m2 not None):
 
     # views of inputs
-    cdef int[:] n_colv = n_col
-    cdef int[:] l_ptrv = l_ptr
-    cdef int[:] l_colv = l_col
+    cdef int[:] n_colv = n_col, l_ptrv = l_ptr, l_colv = l_col
     cdef float[:,::1] xv = xij
-    cdef float[:] m1v = m1
-    cdef float[:] m2v = m2
+    cdef float[:] m1v = m1, m2v = m2
 
     cdef int io, jo, ind
     cdef float complex ik
@@ -283,8 +262,7 @@ def todense2_float(int is_gamma, int no_u,
 
     cdef np.ndarray[DC_FLOAT_t, ndim=2] d1 = np.zeros([no_u,no_u], dtype=DC_FLOAT)
     cdef np.ndarray[DC_FLOAT_t, ndim=2] d2 = np.zeros([no_u,no_u], dtype=DC_FLOAT)
-    cdef float complex[:,::1] d1v = d1
-    cdef float complex[:,::1] d2v = d2
+    cdef float complex[:,::1] d1v = d1, d2v = d2
 
     if is_gamma == 0:
         for io in xrange(no_u):
@@ -313,9 +291,7 @@ def todense1_float_off(int is_gamma, int no_u,
     np.ndarray[DFLOAT_t, ndim=1, mode='c'] m not None):
 
     # views of inputs
-    cdef int[:] n_colv = n_col
-    cdef int[:] l_ptrv = l_ptr
-    cdef int[:] l_colv = l_col
+    cdef int[:] n_colv = n_col, l_ptrv = l_ptr, l_colv = l_col
     cdef float[:] mv = m
     cdef float[:,::1] offv = off
 
@@ -353,12 +329,9 @@ def todense2_float_off(int is_gamma, int no_u,
     np.ndarray[DFLOAT_t, ndim=1, mode='c'] m2 not None):
 
     # views of inputs
-    cdef int[:] n_colv = n_col
-    cdef int[:] l_ptrv = l_ptr
-    cdef int[:] l_colv = l_col
+    cdef int[:] n_colv = n_col, l_ptrv = l_ptr, l_colv = l_col
     cdef float[:,::1] offv = off
-    cdef float[:] m1v = m1
-    cdef float[:] m2v = m2
+    cdef float[:] m1v = m1, m2v = m2
 
     cdef int io, jo, ind, si
     cdef float complex ik
@@ -367,8 +340,7 @@ def todense2_float_off(int is_gamma, int no_u,
 
     cdef np.ndarray[DC_FLOAT_t, ndim=2] d1 = np.zeros([no_u,no_u], dtype=DC_FLOAT)
     cdef np.ndarray[DC_FLOAT_t, ndim=2] d2 = np.zeros([no_u,no_u], dtype=DC_FLOAT)
-    cdef float complex[:,::1] d1v = d1
-    cdef float complex[:,::1] d2v = d2
+    cdef float complex[:,::1] d1v = d1, d2v = d2
 
     if is_gamma == 0:
         for io in xrange(no_u):
