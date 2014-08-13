@@ -25,20 +25,12 @@ cdef extern from "math.h" nogil:
 cdef extern from "math.h" nogil:
     double round(double)
 
-#@cython.profile(False)
-#cdef inline int nint(double d) nogil: return <int>lround(d)
-@cython.profile(False)
 cdef inline int nint(double d) nogil: return <int>round(d)
 
 # Create max-min functions
-@cython.profile(False)
 cdef inline int imax(int a, int b) nogil: return a if a >= b else b
-@cython.profile(False)
 cdef inline int imin(int a, int b) nogil: return a if a <= b else b
 
-@cython.profile(False)
-@cython.boundscheck(False)
-@cython.wraparound(False)
 cdef inline void rec_cell(double[:,::1] recell, double[:,::1] cell) nogil:
      cdef double tmp
      recell[0,0] = cell[1,1]*cell[2,2] - cell[1,2]*cell[2,1]
@@ -63,6 +55,8 @@ cdef inline void rec_cell(double[:,::1] recell, double[:,::1] cell) nogil:
      recell[2,1] = recell[2,1]*tmp
      recell[2,2] = recell[2,2]*tmp
 
+cdef inline double iMd(int i,double d) nogil: return (<double>i)*d
+cdef inline double iMf(int i,float d) nogil: return (<float>i)*d
 
 # This is my first attempt in writing a compliant
 # Cython code that takes a SIESTA sparse

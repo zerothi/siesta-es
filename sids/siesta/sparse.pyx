@@ -6,19 +6,16 @@ import scipy.sparse as spar
 include "../def_cython.pxi"
 
 @cython.boundscheck(False)
-cdef inline int find_idx(int *col,int no,int find):
+cdef inline int find_idx(int *col,int no,int find) nogil:
     cdef int i
     for i in xrange(no):
         if col[i] == find: return i
-    raise ValueError("Could not find column in sparsity pattern")
 
 include "sparse_float.pxi"
 include "sparse_double.pxi"
 include "sparse_xij.pxi"
 
-@cython.profile(False)
 @cython.cdivision(True)
-@cython.boundscheck(False)
 def sparse_uc(int no_u, 
     np.ndarray[DINT_t,   ndim=1, mode='c'] n_col not None,
     np.ndarray[DINT_t,   ndim=1, mode='c'] l_ptr not None,

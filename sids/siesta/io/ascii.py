@@ -34,10 +34,13 @@ class XV(_sim.SimulationFile):
         """ Read the XV file
         """
         a = read_XV(self.file_path)
-        self.xa = a[0]
-        self.va = a[1]
-        self.Z = a[2]
-        self.spec = a[3]
+        self.cell = a[0]
+        self.vcell = a[1]
+        self.xa = a[2]
+        self.va = a[3]
+        self.Z = a[4]
+        self.spec = a[5]
+        self.add_clean('cell','vcell','xa','va','Z','spec')
 
 def read_XV(path):
     """
@@ -79,13 +82,14 @@ def read_XV(path):
         if i != na:
             raise Exception('Error in reading file: '+str(path))
     # return a tuple of data
-    return xa,va,Z,spec
+    return cell,vcell,xa,va,Z,spec
 
 class FA(_sim.SimulationFile):
     def init_file(self):
         """ Read the FA file
         """
         self.fa = read_FA(self.file_path)
+        self.add_clean('fa')
 
 def read_FA(path):
     """
@@ -120,6 +124,8 @@ class ANI(_sim.SimulationFile):
         """ Read the ANI file
         """
         self.ani = read_ANI(self.file_path)
+        self.add_clean('ani')
+
 
 def read_ANI(path):
     """
@@ -165,7 +171,8 @@ class XYZ(_sim.SimulationFile):
     def init_file(self):
         """ Read the XYZ file
         """
-        self.ani = read_XYZ(self.file_path)
+        self.xyz = read_XYZ(self.file_path)
+        self.add_clean('xyz')
 
 def read_XYZ(path):
     """

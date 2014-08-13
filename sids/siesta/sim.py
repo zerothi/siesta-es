@@ -9,13 +9,12 @@ import sids.siesta.io as _io
 
 # Create a list of rules that SIESTA files obeys
 rules = []
+rules.append(_sim.RuleFile(obj=_io.XV,ext='XV',type='XV',
+                           variables=['cell','xa']))
+rules.append(_sim.RuleFile(obj=_io.FA,ext='FA',type='FA'))
+rules.append(_sim.RuleFile(obj=_files.TSHS,ext='TSHS',type='TSHS'))
 rules.append(_sim.RuleFile(obj=_files.HSX,ext='HSX',type='HSX'))
 rules.append(_sim.RuleFile(obj=_files.HS,ext='HS',type='HS'))
-rules.append(_sim.RuleFile(obj=_files.TSHS,ext='TSHS',type='TSHS'))
 rules.append(_sim.RuleFile(obj=_files.DM,ext='DM',type='DM'))
-rules.append(_sim.RuleFile(obj=_io.FA,ext='FA',type='FA'))
 rules.append(_sim.RuleFile(obj=_io.ANI,ext='ANI',type='ANI'))
-rules.append(_sim.RuleFile(obj=_io.XV,ext='XV',type='XV'))
 rules.append(_sim.RuleFile(obj=_io.XYZ,ext='xyz',type='XYZ'))
-
-

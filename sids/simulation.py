@@ -62,6 +62,16 @@ class Simulation(_unit.UnitObject):
                 #print("Found file: "+rule.type)
                 # Create the simulation file (with attached simulation)
                 fS = rule.create_file(path,sim=self)
+
+                if rule.vars:
+                    # Copy over variables
+                    fS.init_file()
+                    for v in rule.vars:
+                        try:
+                            self.add(v,fS.__dict__[v])
+                        except: pass
+                    fS.clean()
+                    
                 t = rule.type
                 if t in self._files:
                     # We already have a same type
@@ -152,6 +162,39 @@ class SimulationFile(_unit.UnitObject):
         # we will add that to _units
         self._units = deepcopy(self._UNITS)
 
+        # A container to clean the object from all
+        # read in data
+        self._cleans = []
+        
+    def remove_clean(self,*names):
+        """ 
+        Removes a varible from the clean list
+        """
+        for name in names:
+            for i in range(len(self._cleans)-1,0,-1):
+                if self._cleans[i] == name:
+                    self._cleans.pop(i)
+
+    def add_clean(self,*names):
+        """
+        Appends a name of variable to be cleaned if object is cleaned
+        """
+        for name in names:
+            if not name in self._cleans: 
+                self._cleans.append(name)
+        
+    def clean(self):
+        """
+        Removes all read in data from this object
+        This requires the user to have added the data
+        to the clean interface
+        (we will not delete from the parent simulation)
+        """
+        for clean in self._cleans:
+            try:
+                del self.__dict__[clean]
+            except: pass
+
     # If an attribute does not exist on this object
     # check the parent simulation.
     def __getattr__(self, attr):
@@ -189,6 +232,7 @@ class RuleFile(object):
             self.ext = kwargs.pop('ext')
             if self.ext[0] != '.': self.ext = "."+self.ext
             self.is_ext = True
+        # Save type of rule-file
         if 'type' in kwargs:
             self.type = kwargs.pop('type')
         else: self.type = None
@@ -204,6 +248,19 @@ class RuleFile(object):
             self.routine = kwargs.pop('routine')
         if self.obj is None and self.routine is None:
             raise SimulationFileError("Rule has not been passed a class/routine")
+        
+        # We define a series of variables that 
+        # is defined via this variable (i.e. read in data
+        # and destroy object immediately)
+        if 'variables' in kwargs:
+            v = kwargs.pop('variables')
+            if isinstance(v,list):
+                self.vars = v
+            else:
+                self.vars = [v]
+        else:
+            self.vars = []
+
 
     def is_file(self,path):
         """

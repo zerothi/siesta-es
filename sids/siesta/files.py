@@ -100,6 +100,7 @@ class SparseMatrix(_sim.SimulationFile):
 
         # The supercell offsets (in Ang)
         self.offset = spar.get_supercells(self.cell, tm)
+        self.add_clean('offset')
 
         # Get the integer offsets for all supercells
         ioffset = spar.get_isupercells(tm)
@@ -149,6 +150,7 @@ class Hamiltonian(SparseMatrix,_es.Hamiltonian):
 
         self.gamma,self.nspin, self.no, self.no_s, \
             self.nnzs = read_header(self.file_path)
+        self.add_clean('gamma','nspin','no','no_s','nnzs')
         self.gamma = self.gamma != 0
         n_col,list_ptr,list_col,H,S,xij = \
             read(fname=self.file_path,
@@ -157,20 +159,33 @@ class Hamiltonian(SparseMatrix,_es.Hamiltonian):
                  maxnh=self.nnzs,nspin=self.nspin)
         # Correct contiguous
         self.n_col = _np.require(n_col,requirements=['C','A'])
+        self.add_clean('n_col')
         del n_col
         self.l_ptr = _np.require(list_ptr,requirements=['C','A'])
+        self.add_clean('l_ptr')
         del list_ptr
         self.l_col = _np.require(list_col,requirements=['C','A']) - 1 # correct numpy indices
+        self.add_clean('l_col')
         del list_col
         self.H = _np.require(H.T,requirements=['C','A'])
+        self.add_clean('H')
         del H
         self.H.shape = (self.nspin,self.nnzs)
         self.S = _np.require(S,requirements=['C','A'])
+        self.add_clean('S')
         del S
         self.xij = _np.require(xij.T,requirements=['C','A'])
+        self.add_clean('xij')
         del xij
         self.xij.shape = (self.nnzs,3)
         # Done reading in information
+
+        # If the simulation has the cell attached,
+        # fetch it and calculate the reciprocal cell
+        try:
+            self.rcell = _np.linalg.inv(self.cell)
+            self.add_clean('rcell')
+        except: pass
     
 class HSX(Hamiltonian):
     """ The HSX file that contains the Hamiltonian, overlap and
@@ -203,20 +218,23 @@ class TSHS(Hamiltonian):
         # Read extra information contained in TSHS
         self.na, cell, self.Ef, self.Qtot, self.T = \
             _sio.read_tshs_header_extra(self.file_path)
+        self.add_clean('na')
         self.cell = _np.require(cell.T,requirements=['C','A'])
         self.cell.shape = (3,3)
+        self.add_clean('cell')
         del cell
         self.rcell = _np.linalg.inv(self.cell)
+        self.add_clean('rcell')
         try:
             self.sim.add('na',self.na)
         except: pass
         try:
             # We add the cell size to the simulation
             self.sim.add_var('cell',self.cell,self._units.unit('cell'))
-            self.sim.add('rcell',self.rcell)
         except: pass
         self.lasto, xa = \
             _sio.read_tshs_extra(self.file_path,na_u=self.na)
+        self.add_clean('lasto','xa')
         try:
             self.sim.add('lasto',self.lasto)
         except: pass
@@ -231,7 +249,9 @@ class TSHS(Hamiltonian):
 
         # create offsets 
         self._correct_sparsity()
-        del self.xij            
+        if 'offset' in self.__dict__:
+            del self.xij
+            self.remove_clean('xij')
 
 class DensityMatrix(SparseMatrix):
     """ A wrapper class to ease the construction of several
@@ -259,14 +279,20 @@ class DM(DensityMatrix):
         n_col,list_ptr,list_col,DM = \
             _sio.read_dm(fname=self.file_path,
                  no_u=self.no, maxnd=self.nnzs,nspin=self.nspin)
+        self.add_clean('nspin','no','nnzs')
+
         # Correct contiguous
         self.n_col = _np.require(n_col,requirements=['C','A'])
+        self.add_clean('n_col')
         del n_col
         self.l_ptr = _np.require(list_ptr,requirements=['C','A'])
+        self.add_clean('l_ptr')
         del list_ptr
         self.l_col = _np.require(list_col,requirements=['C','A']) - 1 # correct numpy indices
+        self.add_clean('l_col')
         del list_col
         self.DM = _np.require(DM.T,requirements=['C','A'])
+        self.add_clean('DM')
         del DM
         self.DM.shape = (self.nspin,self.nnzs)
         # Done reading in information
