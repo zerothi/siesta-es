@@ -58,6 +58,63 @@ cdef inline void rec_cell(double[:,::1] recell, double[:,::1] cell) nogil:
 cdef inline double iMd(int i,double d) nogil: return (<double>i)*d
 cdef inline double iMf(int i,float d) nogil: return (<float>i)*d
 
+@cython.cdivision(True)
+cdef inline int sfind(int no, int *a, int val) nogil:
+    # my SFIND algorithm used in SIESTA
+    cdef int idx, h, nom1 = no-1 # default index
+    if no == 0: return -1
+
+    # The two easiest cases, i.e. they are not in the array...
+    if val < a[0]: return -1
+    if val == a[0]: return 0
+    if a[nom1] < val: return -1
+    if val == a[nom1]: return nom1
+
+    # An *advanced* search algorithm...
+    
+    # Search the sorted array for an entry
+    # We know it *must* have one
+    h = no / 2
+    idx = h # Start in the middle
+    # The integer correction (due to round of errors when 
+    # calculating the new half...
+    while h > 0:
+        
+        # integer division is faster. :)
+        h = h / 2 + h % 2
+                
+        if val < a[idx]:
+            # the value we search for is smaller than 
+            # the current checked value, hence we step back
+            # print 'stepping down',idx,h,no
+            idx = imax(idx - h,0)
+        elif a[idx] < val:
+            # the value we search for is larger than 
+            # the current checked value, hence we step forward
+            # print 'stepping up',idx,h,no
+            idx = imin(idx + h,nom1)
+        else:
+            # print 'found',idx
+            # We know EXACTLY where we are...
+            return idx
+    return -1
+
+cdef inline int uniqc(int no, int *a, int n, int* tmp) nogil:
+    # my SFIND algorithm used in SIESTA
+    cdef int i,j,nn,found
+    if no == 0: return 0
+    tmp[0] = a[0]
+    nn = 1
+    for i in xrange(no):
+        found = 0
+        for j in xrange(nn):
+           if tmp[j] == a[i]: 
+              found = 1
+        if found == 0:
+           nn = nn + 1
+           tmp[nn] = a[i]
+    return nn
+
 # This is my first attempt in writing a compliant
 # Cython code that takes a SIESTA sparse
 # format and creates a matrix

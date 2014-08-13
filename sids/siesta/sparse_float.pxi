@@ -43,7 +43,7 @@ cdef tosparse1_float(int is_gamma, int no_u,
             if n == 0: continue
             for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
                 ik = f_ph(kv,xv[ind,0],xv[ind,1],xv[ind,2])
-                jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
+                jo = sp_ptrv[io] + sfind(n,col_ptr,l_colv[ind] % no_u)
                 dv[jo].real = dv[jo].real + ik.real * mv[ind]
                 dv[jo].imag = dv[jo].imag + ik.imag * mv[ind]
     else:
@@ -52,7 +52,7 @@ cdef tosparse1_float(int is_gamma, int no_u,
             n = sp_ptrv[io+1] - sp_ptrv[io]
             if n == 0: continue
             for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
-                jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
+                jo = sp_ptrv[io] + sfind(n,col_ptr,l_colv[ind] % no_u)
                 dv[jo].real = dv[jo].real + mv[ind]
     return spar.csr_matrix((d,sp_col,sp_ptr),shape=(no_u,no_u),dtype=DC_FLOAT)
 
@@ -90,7 +90,7 @@ cdef tosparse1_float_off(int is_gamma, int no_u,
             for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
                 si = l_colv[ind] / no_u
                 ik = f_ph(kv,offv[si,0],offv[si,1],offv[si,2])
-                jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
+                jo = sp_ptrv[io] + sfind(n,col_ptr,l_colv[ind] % no_u)
                 dv[jo].real = dv[jo].real + ik.real * mv[ind]
                 dv[jo].imag = dv[jo].imag + ik.imag * mv[ind]
     else:
@@ -99,7 +99,7 @@ cdef tosparse1_float_off(int is_gamma, int no_u,
             n = sp_ptrv[io+1] - sp_ptrv[io]
             if n == 0: continue
             for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
-                jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
+                jo = sp_ptrv[io] + sfind(n,col_ptr,l_colv[ind] % no_u)
                 dv[jo].real = dv[jo].real + mv[ind]
     return spar.csr_matrix((d,sp_col,sp_ptr),shape=(no_u,no_u),dtype=DC_FLOAT)
 
@@ -139,7 +139,7 @@ cdef tosparse2_float(int is_gamma, int no_u,
             if n == 0: continue
             for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
                 ik = f_ph(kv,xv[ind,0],xv[ind,1],xv[ind,2])
-                jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
+                jo = sp_ptrv[io] + sfind(n,col_ptr,l_colv[ind] % no_u)
                 d1v[jo].real = d1v[jo].real + ik.real * m1v[ind]
                 d1v[jo].imag = d1v[jo].imag + ik.imag * m1v[ind]
                 d2v[jo].real = d2v[jo].real + ik.real * m2v[ind]
@@ -150,7 +150,7 @@ cdef tosparse2_float(int is_gamma, int no_u,
             n = sp_ptrv[io+1] - sp_ptrv[io]
             if n == 0: continue
             for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
-                jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
+                jo = sp_ptrv[io] + sfind(n,col_ptr,l_colv[ind] % no_u)
                 d1v[jo].real = d1v[jo].real + m1v[ind]
                 d2v[jo].real = d2v[jo].real + m2v[ind]
 
@@ -194,7 +194,7 @@ cdef tosparse2_float_off(int is_gamma, int no_u,
             for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
                 si = l_colv[ind] / no_u
                 ik = f_ph(kv,offv[si,0],offv[si,1],offv[si,2])
-                jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
+                jo = sp_ptrv[io] + sfind(n,col_ptr,l_colv[ind] % no_u)
                 d1v[jo].real = d1v[jo].real + ik.real * m1v[ind]
                 d1v[jo].imag = d1v[jo].imag + ik.imag * m1v[ind]
                 d2v[jo].real = d2v[jo].real + ik.real * m2v[ind]
@@ -205,7 +205,7 @@ cdef tosparse2_float_off(int is_gamma, int no_u,
             n = sp_ptrv[io+1] - sp_ptrv[io]
             if n == 0: continue
             for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
-                jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
+                jo = sp_ptrv[io] + sfind(n,col_ptr,l_colv[ind] % no_u)
                 d1v[jo].real = d1v[jo].real + m1v[ind]
                 d2v[jo].real = d2v[jo].real + m2v[ind]
 
