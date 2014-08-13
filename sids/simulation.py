@@ -1,4 +1,4 @@
-"""
+r"""
 Utility for importing DFT directories
 =====================================
 
@@ -8,6 +8,7 @@ from copy import deepcopy
 import os.path as _osp
 import glob as _glob
 import sids.helper.units as _unit
+import numpy as _np
 
 # A class wrapper to be used for DFT-sub-modules
 class Simulation(_unit.UnitObject):
@@ -67,9 +68,7 @@ class Simulation(_unit.UnitObject):
                     # Copy over variables
                     fS.init_file()
                     for v in rule.vars:
-                        try:
-                            self.add(v,fS.__dict__[v])
-                        except: pass
+                        self.add(v,fS.__dict__[v])
                     fS.clean()
                     
                 t = rule.type
@@ -85,24 +84,32 @@ class Simulation(_unit.UnitObject):
                 pass
             pass
 
-    def add_var(self,name,var,unit=None,overwrite=False):
+    def add_var(self,name,var,unit=None,overwrite=False,atol=1.e-8):
         """ Add a variable by name, variable and possible unit """
         if overwrite:
             pass
         elif name in self.__dict__:
-            raise SimulationError("Variable already existing in simulation.")
+            if isinstance(var,_np.ndarray):
+                if not _np.allclose(self.__dict__[name],var,atol=atol):
+                    raise SimulationError("Variable: " + name+" is not the same.")
+            else:
+                if abs(self.__dict__[name] - var) > atol:
+                    raise SimulationError("Variable: " + name+" is not the same.")
+            return
         self.__dict__[name] = var
         if unit:
             self._units.append(_unit.Unit(name,unit))
 
-    def add(self,nattr,attr,overwrite=False):
+    def add(self,name,attr,overwrite=False):
         """Extends the simulation with an attribute
         """
         if overwrite:
             pass
-        elif nattr in self.__dict__:
-            raise SimulationError("Attribute: "+nattr+" already exists.")
-        self.__dict__[nattr] = attr
+        elif name in self.__dict__:
+            if name != self.__dict__[name]:
+                raise SimulationError("Attribute: "+name+" already exists.")
+            return
+        self.__dict__[name] = attr
 
     def init_simulation(self):
         """ Default simulation initializer

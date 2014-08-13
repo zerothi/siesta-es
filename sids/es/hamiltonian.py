@@ -24,8 +24,7 @@ class Hamiltonian(object):
         self.has_overlap = has_overlap
         self.method = 'dense'
 
-    def eigs(self,k=_np.zeros((3,),_np.float64),eigs=None,
-             **kwargs):
+    def eigs(self,k=_np.zeros((3,),_np.float64),eigs=None,**kwargs):
         """ Return the eigenvalues of this Hamiltonian.
         """
         try:

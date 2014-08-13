@@ -223,27 +223,25 @@ class TSHS(Hamiltonian):
         del cell
         self.rcell = _np.linalg.inv(self.cell)
         self.add_clean('rcell')
-        try:
-            self.sim.add('na',self.na)
-        except: pass
-        try:
-            # We add the cell size to the simulation
-            self.sim.add_var('cell',self.cell,self._units.unit('cell'))
-        except: pass
+
+        # We add the cell size to the simulation
+        self.sim.add_var('na',self.na)
+        self.sim.add_var('cell',self.cell,self._units.unit('cell'))
+
         self.lasto, xa = \
             _sio.read_tshs_extra(self.file_path,na_u=self.na)
         self.add_clean('lasto','xa')
-        try:
-            self.sim.add('lasto',self.lasto)
-        except: pass
+
+        # Create the lasto array
+        self.sim.add_var('lasto',self.lasto)
         
         # Convert xa to C-array
         self.xa = _np.require(xa.T,requirements=['C','A'])
         self.xa.shape = (self.na,3)
         del xa
-        try:
-            self.sim.add_var('xa',self.xa,self._units.unit('xa'))
-        except: pass
+
+        # Create the coordinate
+        self.sim.add_var('xa',self.xa,self._units.unit('xa'))
 
         # create offsets 
         self._correct_sparsity()

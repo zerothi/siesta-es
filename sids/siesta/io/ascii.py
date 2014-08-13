@@ -8,6 +8,9 @@ import sids.siesta.fdf as _fdf
 import sids.helper.units as _unit
 import sids.simulation as _sim
 
+class FileASCIIError(Exception):
+    """ Error for reading SIESTA files """
+    pass
 
 def read(path):
     """
@@ -80,7 +83,7 @@ def read_XV(path):
             va[i,:] = ns[3:]
             i += 1
         if i != na:
-            raise Exception('Error in reading file: '+str(path))
+            raise FileASCIIError('Error in reading file: '+str(path))
     # return a tuple of data
     return cell,vcell,xa,va,Z,spec
 
@@ -88,8 +91,8 @@ class FA(_sim.SimulationFile):
     def init_file(self):
         """ Read the FA file
         """
-        self.fa = read_FA(self.file_path)
-        self.add_clean('fa')
+        self.F = read_FA(self.file_path)
+        self.add_clean('F')
 
 def read_FA(path):
     """
@@ -107,16 +110,18 @@ def read_FA(path):
 
         na = None
         while na is None:
-            line = lines.pop(0)
-            if len(line.strip()) == 0: continue
+            line = lines.pop(0).strip()
+            if len(line) == 0: continue
             na = int(line)
-        fa = _np.empty((na,3),_np.float)
+
+        fa = _np.empty([na,3],_np.float)
         for line in lines:
-            if len(line.strip()) == 0: continue
-            l = _np.array([float(f) for f in line.split()]) * conv
-            fa[int(l[0]),:] = l[1:]
+            line = line.strip()
+            if len(line) == 0: continue
+            l = _np.array([float(f) for f in line.split()])
+            fa[int(l[0])-1,:] = l[1:] * conv
         if int(l[0]) != na:
-            raise Exception("Error in FA file")
+            raise FileASCIIError("Error in FA file")
     return fa
 
 class ANI(_sim.SimulationFile):
@@ -142,28 +147,41 @@ def read_ANI(path):
         # read number of atoms
         na = None
         while na is None:
-            line = lines.pop(0)
-            if len(line.strip()) == 0: continue
+            line = lines.pop(0).strip()
+            if len(line) == 0: continue
             na = int(line)
-        cur = _np.empty((na,3),_np.float)
+
+        # Placeholder for each animation
+        cur = _np.empty([na,3],_np.float)
 
         i = 0
         for line in lines:
-            if len(line.strip()) == 0: continue
+            line = line.strip()
+            if len(line) == 0: continue
             l = _np.array([float(f) for f in line.split()[1:]]) * Ang
+            if len(l) == 0: 
+                # Check that the number of atoms is correct
+                l = int(line)
+                if l != na: 
+                    raise FileASCIIError("Atoms are changing in the ANI file: "+str(path))
+                continue
+
+            # Accumulate data
             cur[i,:] = l
             i += 1
             if i == na:
                 # Append new animation step
+                cur.shape = (1,na,3)
                 try:
-                    ani = _np.vstack(ani,cur)
+                    ani = _np.vstack((ani,cur))
                 except:
-                    ani = _np.empty((1,na,3),_np.float)
+                    ani = _np.empty([1,na,3],_np.float)
                     ani[0,:,:] = cur
+                cur.shape = (na,3)
                 i = 0
         if i != 0:
             # the ani file is not complete
-            raise Exception('ANI file: '+str(path)+ ' is not complete')
+            raise FileASCIIError('ANI file: '+str(path)+ ' is not complete')
 
     return ani
 
@@ -189,18 +207,19 @@ def read_XYZ(path):
         # read number of atoms
         na = None
         while na is None:
-            line = lines.pop(0)
-            if len(line.strip()) == 0: continue
+            line = lines.pop(0).strip()
+            if len(line) == 0: continue
             na = int(line)
         xyz = _np.empty((na,3),_np.float)
 
         i = 0
         for line in lines:
-            if len(line.strip()) == 0: continue
+            line = line.strip()
+            if len(line) == 0: continue
             l = _np.array([float(f) for f in line.split()[1:]]) * Ang
             xyz[i,:] = l
             i += 1
             if i == na:
                 return xyz
         # the ani file is not complete
-        raise Exception('XYZ file: '+str(path)+ ' is not complete')
+        raise FileASCIIError('XYZ file: '+str(path)+ ' is not complete')

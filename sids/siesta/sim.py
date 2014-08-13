@@ -11,7 +11,8 @@ import sids.siesta.io as _io
 rules = []
 rules.append(_sim.RuleFile(obj=_io.XV,ext='XV',type='XV',
                            variables=['cell','xa']))
-rules.append(_sim.RuleFile(obj=_io.FA,ext='FA',type='FA'))
+rules.append(_sim.RuleFile(obj=_io.FA,ext='FA',type='FA',
+                           variables=['F']))
 rules.append(_sim.RuleFile(obj=_files.TSHS,ext='TSHS',type='TSHS'))
 rules.append(_sim.RuleFile(obj=_files.HSX,ext='HSX',type='HSX'))
 rules.append(_sim.RuleFile(obj=_files.HS,ext='HS',type='HS'))
