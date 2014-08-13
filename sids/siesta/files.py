@@ -61,7 +61,7 @@ class SparseMatrix(_sim.SimulationFile):
             raise SparseMatrixError("Sparse method have not been initialized, call self.set(method='sparse')")
 
         # convert k-point to current cell size
-        tk = _k.PI2 * _np.dot(k,self.rcell)
+        tk = _k.PI2 * _np.dot(k,self.rcell.T)
         if hasattr(self,'offset'):
             return spar.tosparse_off(tk,self.no,
                                      self.n_col,self.l_ptr,self.l_col,
@@ -76,7 +76,7 @@ class SparseMatrix(_sim.SimulationFile):
         k-point"""
         
         # convert k-point to current cell size
-        tk = _k.PI2 * _np.dot(k,self.rcell)
+        tk = _k.PI2 * _np.dot(k,self.rcell.T)
         if hasattr(self,'offset'):
             return spar.todense_off(tk,self.no,
                                     self.n_col,self.l_ptr,self.l_col,
@@ -98,17 +98,16 @@ class SparseMatrix(_sim.SimulationFile):
         # get transfer matrix sizes
         tm = spar.xij_sc(self.rcell,self.nnzs,self.xij)
 
+        # Get the integer offsets for all supercells
+        #ioffset = spar.get_isupercells(tm)
+
         # The supercell offsets (in Ang)
         self.offset = spar.get_supercells(self.cell, tm)
         self.add_clean('offset')
 
-        # Get the integer offsets for all supercells
-        ioffset = spar.get_isupercells(tm)
-
         # Correct list_col (create the correct supercell index)
         spar.list_col_correct(self.rcell, self.no, self.nnzs, 
-                              self.l_col, self.xij, 
-                              tm, ioffset)
+                              self.l_col, self.xij, tm)
 
 class Hamiltonian(SparseMatrix,_es.Hamiltonian):
     """ A wrapper class to ease the construction of several
@@ -209,8 +208,7 @@ class TSHS(Hamiltonian):
     """ The TSHS file that contains the Hamiltonian, overlap and
     xij
     """
-    _UNITS = _unit.Units('H','eV','cell','Ang',
-                   'xa','Ang','Ef','eV')
+    _UNITS = _unit.Units('H','eV','cell','Ang','xa','Ang','Ef','eV')
     def init_file(self):
         """ Initialization of the TSHS file data type
         """

@@ -11,15 +11,15 @@ cdef inline double complex d_ph(double[:] k,double x,double y,double z) nogil:
      return zz
 
 @cython.cdivision(True)
-def tosparse1_double(int is_gamma, int no_u, 
-    np.ndarray[DINT_t,    ndim=1, mode='c'] n_col not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] l_col not None,
-    np.ndarray[DDOUBLE_t, ndim=2, mode='c'] xij not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_ptr not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_col not None,
-    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k not None,
-    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m not None):
+cdef tosparse1_double(int is_gamma, int no_u, 
+    np.ndarray[DINT_t,    ndim=1, mode='c'] n_col,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_col,
+    np.ndarray[DDOUBLE_t, ndim=2, mode='c'] xij,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_ptr,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_col,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m):
 
     # views of inputs
     cdef int[:] n_colv = n_col, l_ptrv = l_ptr, l_colv = l_col
@@ -40,6 +40,7 @@ def tosparse1_double(int is_gamma, int no_u,
         for io in xrange(no_u):
             col_ptr = &sp_colv[sp_ptrv[io]]
             n = sp_ptrv[io+1] - sp_ptrv[io]
+            if n == 0: continue
             for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
                 ik = d_ph(kv,xv[ind,0],xv[ind,1],xv[ind,2])
                 jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
@@ -49,21 +50,22 @@ def tosparse1_double(int is_gamma, int no_u,
         for io in xrange(no_u):
             col_ptr = &sp_colv[sp_ptrv[io]]
             n = sp_ptrv[io+1] - sp_ptrv[io]
+            if n == 0: continue
             for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
                 jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
                 dv[jo].real = dv[jo].real + mv[ind]
     return spar.csr_matrix((d,sp_col,sp_ptr),shape=(no_u,no_u),dtype=DC_DOUBLE)
 
 @cython.cdivision(True)
-def tosparse1_double_off(int is_gamma, int no_u, 
-    np.ndarray[DINT_t,    ndim=1, mode='c'] n_col not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] l_col not None,
-    np.ndarray[DDOUBLE_t, ndim=2, mode='c'] off not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_ptr not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_col not None,
-    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k not None,
-    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m not None):
+cdef tosparse1_double_off(int is_gamma, int no_u, 
+    np.ndarray[DINT_t,    ndim=1, mode='c'] n_col,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_col,
+    np.ndarray[DDOUBLE_t, ndim=2, mode='c'] off,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_ptr,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_col,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m):
 
     # views of inputs
     cdef int[:] n_colv = n_col, l_ptrv = l_ptr, l_colv = l_col
@@ -84,6 +86,7 @@ def tosparse1_double_off(int is_gamma, int no_u,
         for io in xrange(no_u):
             col_ptr = &sp_colv[sp_ptrv[io]]
             n = sp_ptrv[io+1] - sp_ptrv[io]
+            if n == 0: continue
             for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
                 si = l_colv[ind] / no_u
                 ik = d_ph(kv,offv[si,0],offv[si,1],offv[si,2])
@@ -94,6 +97,7 @@ def tosparse1_double_off(int is_gamma, int no_u,
         for io in xrange(no_u):
             col_ptr = &sp_colv[sp_ptrv[io]]
             n = sp_ptrv[io+1] - sp_ptrv[io]
+            if n == 0: continue
             for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
                 jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
                 dv[jo].real = dv[jo].real + mv[ind]
@@ -101,16 +105,16 @@ def tosparse1_double_off(int is_gamma, int no_u,
 
 
 @cython.cdivision(True)
-def tosparse2_double(int is_gamma, int no_u, 
-    np.ndarray[DINT_t,    ndim=1, mode='c'] n_col not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] l_col not None,
-    np.ndarray[DDOUBLE_t, ndim=2, mode='c'] xij not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_ptr not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_col not None,
-    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k not None,
-    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m1 not None,
-    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m2 not None):
+cdef tosparse2_double(int is_gamma, int no_u, 
+    np.ndarray[DINT_t,    ndim=1, mode='c'] n_col,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_col,
+    np.ndarray[DDOUBLE_t, ndim=2, mode='c'] xij,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_ptr,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_col,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m1,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m2):
 
     # views of inputs
     cdef int[:] n_colv = n_col, l_ptrv = l_ptr, l_colv = l_col
@@ -132,6 +136,7 @@ def tosparse2_double(int is_gamma, int no_u,
         for io in xrange(no_u):
             col_ptr = &sp_colv[sp_ptrv[io]]
             n = sp_ptrv[io+1] - sp_ptrv[io]
+            if n == 0: continue
             for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
                 ik = d_ph(kv,xv[ind,0],xv[ind,1],xv[ind,2])
                 jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
@@ -143,6 +148,7 @@ def tosparse2_double(int is_gamma, int no_u,
         for io in xrange(no_u):
             col_ptr = &sp_colv[sp_ptrv[io]]
             n = sp_ptrv[io+1] - sp_ptrv[io]
+            if n == 0: continue
             for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
                 jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
                 d1v[jo].real = d1v[jo].real + m1v[ind]
@@ -152,16 +158,16 @@ def tosparse2_double(int is_gamma, int no_u,
             spar.csr_matrix((d2,sp_col,sp_ptr),shape=(no_u,no_u),dtype=DC_DOUBLE))
 
 @cython.cdivision(True)
-def tosparse2_double_off(int is_gamma, int no_u, 
-    np.ndarray[DINT_t,    ndim=1, mode='c'] n_col not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] l_col not None,
-    np.ndarray[DDOUBLE_t, ndim=2, mode='c'] off not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_ptr not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_col not None,
-    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k not None,
-    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m1 not None,
-    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m2 not None):
+cdef tosparse2_double_off(int is_gamma, int no_u, 
+    np.ndarray[DINT_t,    ndim=1, mode='c'] n_col,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_col,
+    np.ndarray[DDOUBLE_t, ndim=2, mode='c'] off,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_ptr,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] sp_col,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m1,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m2):
 
     # views of inputs
     cdef int[:] n_colv = n_col, l_ptrv = l_ptr, l_colv = l_col
@@ -183,6 +189,7 @@ def tosparse2_double_off(int is_gamma, int no_u,
         for io in xrange(no_u):
             col_ptr = &sp_colv[sp_ptrv[io]]
             n = sp_ptrv[io+1] - sp_ptrv[io]
+            if n == 0: continue
             for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
                 si = l_colv[ind] / no_u
                 ik = d_ph(kv,offv[si,0],offv[si,1],offv[si,2])
@@ -195,6 +202,7 @@ def tosparse2_double_off(int is_gamma, int no_u,
         for io in xrange(no_u):
             col_ptr = &sp_colv[sp_ptrv[io]]
             n = sp_ptrv[io+1] - sp_ptrv[io]
+            if n == 0: continue
             for ind in xrange(l_ptrv[io],l_ptrv[io]+n_colv[io]):
                 jo = sp_ptrv[io] + find_idx(col_ptr,n,l_colv[ind] % no_u)
                 d1v[jo].real = d1v[jo].real + m1v[ind]
@@ -205,13 +213,13 @@ def tosparse2_double_off(int is_gamma, int no_u,
 
 
 @cython.cdivision(True)
-def todense1_double(int is_gamma, int no_u, 
-    np.ndarray[DINT_t,    ndim=1, mode='c'] n_col not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] l_col not None,
-    np.ndarray[DDOUBLE_t, ndim=2, mode='c'] xij not None,
-    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k not None,
-    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m not None):
+cdef todense1_double(int is_gamma, int no_u, 
+    np.ndarray[DINT_t,    ndim=1, mode='c'] n_col,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_col,
+    np.ndarray[DDOUBLE_t, ndim=2, mode='c'] xij,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m):
 
     # views of inputs
     cdef int[:] n_colv = n_col, l_ptrv = l_ptr, l_colv = l_col
@@ -241,14 +249,14 @@ def todense1_double(int is_gamma, int no_u,
     return d
 
 @cython.cdivision(True)
-def todense2_double(int is_gamma, int no_u, 
-    np.ndarray[DINT_t,    ndim=1, mode='c'] n_col not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] l_col not None,
-    np.ndarray[DDOUBLE_t, ndim=2, mode='c'] xij not None,
-    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k not None,
-    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m1 not None,
-    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m2 not None):
+cdef todense2_double(int is_gamma, int no_u, 
+    np.ndarray[DINT_t,    ndim=1, mode='c'] n_col,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_col,
+    np.ndarray[DDOUBLE_t, ndim=2, mode='c'] xij,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m1,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m2):
 
     # views of inputs
     cdef int[:] n_colv = n_col, l_ptrv = l_ptr, l_colv = l_col
@@ -282,13 +290,13 @@ def todense2_double(int is_gamma, int no_u,
 
 
 @cython.cdivision(True)
-def todense1_double_off(int is_gamma, int no_u, 
-    np.ndarray[DINT_t,    ndim=1, mode='c'] n_col not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] l_col not None,
-    np.ndarray[DDOUBLE_t, ndim=2, mode='c'] off not None,
-    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k not None,
-    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m not None):
+cdef todense1_double_off(int is_gamma, int no_u, 
+    np.ndarray[DINT_t,    ndim=1, mode='c'] n_col,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_col,
+    np.ndarray[DDOUBLE_t, ndim=2, mode='c'] off,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m):
 
     # views of inputs
     cdef int[:] n_colv = n_col, l_ptrv = l_ptr, l_colv = l_col
@@ -320,14 +328,14 @@ def todense1_double_off(int is_gamma, int no_u,
 
 
 @cython.cdivision(True)
-def todense2_double_off(int is_gamma, int no_u, 
-    np.ndarray[DINT_t,    ndim=1, mode='c'] n_col not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr not None,
-    np.ndarray[DINT_t,    ndim=1, mode='c'] l_col not None,
-    np.ndarray[DDOUBLE_t, ndim=2, mode='c'] off not None,
-    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k not None,
-    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m1 not None,
-    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m2 not None):
+cdef todense2_double_off(int is_gamma, int no_u, 
+    np.ndarray[DINT_t,    ndim=1, mode='c'] n_col,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_ptr,
+    np.ndarray[DINT_t,    ndim=1, mode='c'] l_col,
+    np.ndarray[DDOUBLE_t, ndim=2, mode='c'] off,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m1,
+    np.ndarray[DDOUBLE_t, ndim=1, mode='c'] m2):
 
     # views of inputs
     cdef int[:] n_colv = n_col, l_ptrv = l_ptr, l_colv = l_col

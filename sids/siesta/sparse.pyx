@@ -5,11 +5,46 @@ import scipy.sparse as spar
 
 include "../def_cython.pxi"
 
-@cython.boundscheck(False)
-cdef inline int find_idx(int *col,int no,int find) nogil:
-    cdef int i
-    for i in xrange(no):
-        if col[i] == find: return i
+@cython.cdivision(True)
+cdef inline int find_idx(int *col,int no,int val) nogil:
+    # my SFIND algorithm used in SIESTA
+    cdef int idx, h, nom1 = no-1 # default index
+    if no == 0: return -1
+
+    # The two easiest cases, i.e. they are not in the array...
+    if val < col[0]: return -1
+    if val == col[0]: return 0
+    if col[nom1] < val: return -1
+    if val == col[nom1]: return nom1
+
+    # An *advanced* search algorithm...
+    
+    # Search the sorted array for an entry
+    # We know it *must* have one
+    h = no / 2
+    idx = h # Start in the middle
+    # The integer correction (due to round of errors when 
+    # calculating the new half...
+    while h > 0:
+        
+        # integer division is faster. :)
+        h = h / 2 + h % 2
+                
+        if val < col[idx]:
+            # the value we search for is smaller than 
+            # the current checked value, hence we step back
+            # print 'stepping down',idx,h,no
+            idx = imax(idx - h,0)
+        elif col[idx] < val:
+            # the value we search for is larger than 
+            # the current checked value, hence we step forward
+            # print 'stepping up',idx,h,no
+            idx = imin(idx + h,nom1)
+        else:
+            # print 'found',idx
+            # We know EXACTLY where we are...
+            return idx
+    return -1
 
 include "sparse_float.pxi"
 include "sparse_double.pxi"
@@ -79,13 +114,11 @@ def todense(np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k not None, \
     if m1.dtype == DFLOAT:
         if m2 is None:
             return todense1_float (is_gamma,no_u, n_col, l_ptr, l_col, xij, kf, m1)
-        else:
-            return todense2_float (is_gamma,no_u, n_col, l_ptr, l_col, xij, kf, m1, m2)
+        return todense2_float (is_gamma,no_u, n_col, l_ptr, l_col, xij, kf, m1, m2)
     else:
         if m2 is None:
             return todense1_double(is_gamma,no_u, n_col, l_ptr, l_col, xij, k , m1)
-        else:
-            return todense2_double(is_gamma,no_u, n_col, l_ptr, l_col, xij, k , m1, m2)
+        return todense2_double(is_gamma,no_u, n_col, l_ptr, l_col, xij, k , m1, m2)
 
 # Wrapper to handle correct data
 def todense_off(np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k not None, \
@@ -107,13 +140,11 @@ def todense_off(np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k not None, \
     if m1.dtype == DFLOAT:
         if m2 is None:
             return todense1_float_off (is_gamma,no_u, n_col, l_ptr, l_col, off, kf, m1)
-        else:
-            return todense2_float_off (is_gamma,no_u, n_col, l_ptr, l_col, off, kf, m1, m2)
+        return todense2_float_off (is_gamma,no_u, n_col, l_ptr, l_col, off, kf, m1, m2)
     else:
         if m2 is None:
             return todense1_double_off(is_gamma,no_u, n_col, l_ptr, l_col, off, k , m1)
-        else:
-            return todense2_double_off(is_gamma,no_u, n_col, l_ptr, l_col, off, k , m1, m2)
+        return todense2_double_off(is_gamma,no_u, n_col, l_ptr, l_col, off, k , m1, m2)
 
 # Wrapper to handle correct data
 def tosparse(np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k not None, \
@@ -138,13 +169,11 @@ def tosparse(np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k not None, \
     if m1.dtype == DFLOAT:
         if m2 is None:
             return tosparse1_float (is_gamma,no_u, n_col, l_ptr, l_col, xij, sp_ptr, sp_col, kf, m1)
-        else:
-            return tosparse2_float (is_gamma,no_u, n_col, l_ptr, l_col, xij, sp_ptr, sp_col, kf, m1, m2)
+        return tosparse2_float (is_gamma,no_u, n_col, l_ptr, l_col, xij, sp_ptr, sp_col, kf, m1, m2)
     else:
         if m2 is None:
             return tosparse1_double(is_gamma,no_u, n_col, l_ptr, l_col, xij, sp_ptr, sp_col, k , m1)
-        else:
-            return tosparse2_double(is_gamma,no_u, n_col, l_ptr, l_col, xij, sp_ptr, sp_col, k , m1, m2)
+        return tosparse2_double(is_gamma,no_u, n_col, l_ptr, l_col, xij, sp_ptr, sp_col, k , m1, m2)
 
 
 # Wrapper to handle correct data
@@ -170,10 +199,8 @@ def tosparse_off(np.ndarray[DDOUBLE_t, ndim=1, mode='c'] k not None, \
     if m1.dtype == DFLOAT:
         if m2 is None:
             return tosparse1_float_off (is_gamma,no_u, n_col, l_ptr, l_col, off, sp_ptr, sp_col, kf, m1)
-        else:
-            return tosparse2_float_off (is_gamma,no_u, n_col, l_ptr, l_col, off, sp_ptr, sp_col, kf, m1, m2)
+        return tosparse2_float_off (is_gamma,no_u, n_col, l_ptr, l_col, off, sp_ptr, sp_col, kf, m1, m2)
     else:
         if m2 is None:
             return tosparse1_double_off(is_gamma,no_u, n_col, l_ptr, l_col, off, sp_ptr, sp_col, k , m1)
-        else:
-            return tosparse2_double_off(is_gamma,no_u, n_col, l_ptr, l_col, off, sp_ptr, sp_col, k , m1, m2)
+        return tosparse2_double_off(is_gamma,no_u, n_col, l_ptr, l_col, off, sp_ptr, sp_col, k , m1, m2)
