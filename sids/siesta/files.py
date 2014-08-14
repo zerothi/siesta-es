@@ -63,13 +63,14 @@ class SparseMatrix(_sim.SimulationFile):
         # convert k-point to current cell size
         tk = _k.PI2 * _np.dot(k,self.rcell.T)
         if hasattr(self,'offset'):
+            # Using the offset method does increase performance
+            # Hence it will be the preferred way.
             return spar.tosparse_off(tk,self.no,
                                      self.n_col,self.l_ptr,self.l_col,
                                      self.offset,self.s_ptr,self.s_col,m1,m2)
-        else:
-            return spar.tosparse(tk,self.no,
-                                 self.n_col,self.l_ptr,self.l_col,
-                                 self.xij,self.s_ptr,self.s_col,m1,m2)
+        return spar.tosparse(tk,self.no,
+                             self.n_col,self.l_ptr,self.l_col,
+                             self.xij,self.s_ptr,self.s_col,m1,m2)
 
     def _todense(self,k,m1,m2=None):
         """ Returns a dense matrix of this Hamiltonian at the specified
@@ -78,13 +79,14 @@ class SparseMatrix(_sim.SimulationFile):
         # convert k-point to current cell size
         tk = _k.PI2 * _np.dot(k,self.rcell.T)
         if hasattr(self,'offset'):
+            # Using the offset method does increase performance
+            # Hence it will be the preferred way.
             return spar.todense_off(tk,self.no,
                                     self.n_col,self.l_ptr,self.l_col,
                                     self.offset,m1,m2)
-        else:
-            return spar.todense(tk,self.no,
-                                self.n_col,self.l_ptr,self.l_col,
-                                self.xij,m1,m2)
+        return spar.todense(tk,self.no,
+                            self.n_col,self.l_ptr,self.l_col,
+                            self.xij,m1,m2)
 
     def _correct_sparsity(self):
         """ 
@@ -108,6 +110,7 @@ class SparseMatrix(_sim.SimulationFile):
         # Correct list_col (create the correct supercell index)
         spar.list_col_correct(self.rcell, self.no, self.nnzs, 
                               self.l_col, self.xij, tm)
+        
 
 class Hamiltonian(SparseMatrix,_es.Hamiltonian):
     """ A wrapper class to ease the construction of several
@@ -245,6 +248,7 @@ class TSHS(Hamiltonian):
 
         # create offsets 
         self._correct_sparsity()
+        # Remove unneeded xij array.
         if 'offset' in self.__dict__:
             del self.xij
             self.remove_clean('xij')
