@@ -7,6 +7,7 @@ import os as _os, os.path as _osp
 import sids.siesta.fdf as _fdf
 import sids.helper.units as _unit
 import sids.simulation as _sim
+import ascii_tbt as _tbt
 
 class FileASCIIError(Exception):
     """ Error for reading SIESTA files """
@@ -21,16 +22,19 @@ def read(path):
     path : the filename (we then guess the file type and read)
     """
     (root,ext) = _osp.splitext(path)
-    if ext.lower() == 'fdf':
+    ext = ext.lower()
+    if ext == 'fdf':
         return _fdf.FileFDF(path)
-    if ext.lower() == 'xv':
+    if ext == 'xv':
         return read_XV(path)
-    if ext.lower() == 'fa':
+    if ext == 'fa':
         return read_FA(path)
-    if ext.lower() == 'xyz':
+    if ext == 'xyz':
         return read_XYZ(path)
-    if ext.lower() == 'ani':
+    if ext == 'ani':
         return read_ANI(path)
+    if ext == 'trans' or ext == 'avtrans':
+        return _tbt.read_TRANS(path)
 
 class XV(_sim.SimulationFile):
     def init_file(self):

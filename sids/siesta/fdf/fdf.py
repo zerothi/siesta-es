@@ -2,6 +2,7 @@
 Implements the fdf key word algorithm
 """
 
+import sids.simulation as _sim
 import sids.helper.units as _unit
 from copy import deepcopy
 
@@ -22,13 +23,12 @@ class FDFException(Exception):
     """
     pass # We utilize the generic interface
 
-class FileFDF(object):
+class FileFDF(_sim.SimulationFile):
     """ An object for retaining the fdf keywords
     """
     
-    def __init__(self,file_path):
-        """ input file for reading """
-        self.file_path = file_path
+    def init_file(self):
+        """ Initialization for the fdf file """
 
         # Populate the dictionary
         self._fdf = FileFDF.read(file_path)

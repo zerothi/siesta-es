@@ -19,12 +19,14 @@ class Kpoint(_np.ndarray):
         Initialize the k-points and weights for this object
         """
         # Create the object we wish to typeset and return
+        k = _np.array(k)
         if k.shape:
             obj = _np.ndarray.__new__(cls,k.shape)
             obj[:] = _np.array(k,dtype=_np.float64)
         else:
             obj = _np.ndarray.__new__(cls,(1,))
             obj[0] = k
+        obj._k_idx = 0
         # transfer weights
         obj.w = _np.array(w,dtype=_np.float64)
         return obj
@@ -55,6 +57,10 @@ class Kpoint(_np.ndarray):
                 w = self.w.__getitem__(key)
         return Kpoint(nk,w)
 
+    def __str__(self):
+        """ The string equals the representation """
+        return self.__repr__()
+
     def __repr__(self):
         """ Returns a representation of the k-point
         """
@@ -78,6 +84,23 @@ class Kpoint(_np.ndarray):
             # this will return an array of the quantities
             return repr(_np.array(self))
         return s
+
+
+    # iterable functions
+    def __next__(self):
+        if self._k_idx >= self.nk:
+            self._k_idx = 0 # reset
+            raise StopIteration
+        else:
+            tmp = Kpoint(self.k[self._k_idx],self.w[self._k_idx])
+            self._k_idx += 1
+            return tmp
+
+    next = __next__ # Python 2 equivalent of __next__
+
+    def __iter__(self):
+        """ An iterable of the k-points in this kgrid segment """
+        return self
 
     @property
     def nk(self):
@@ -125,7 +148,7 @@ class Kpoint(_np.ndarray):
         # make a copy of k to loop them correctly
         rm_list = []
         w = _np.copy(self.w)
-        for i in range(self.nk):
+        for i in xrange(self.nk):
             if i in rm_list: continue
             ka = self.k[i]
             kk = _np.delete(self.k,i,axis=0)
@@ -166,7 +189,7 @@ class KPath(object):
         # create the k-points
         k = _np.empty((0,),_np.float64)
         self.n = [0]
-        for i in range(len(self.points)-1):
+        for i in xrange(len(self.points)-1):
             l = _np.sqrt(_np.sum((self.points[i+1]-self.points[i])**2))
             # Calculate number of k-points on this path
             n = int(round(l / self.len * nk))
@@ -190,7 +213,7 @@ class KPath(object):
         t,n = self.get_plot_label()
         ax.set_ticks(t)
         ax.set_ticklabels(n)
-        
+
 
 def k_points(nk,p1,p2,end=False):
     """ Returns k-points which goes from p1 to p2
@@ -225,10 +248,13 @@ def Monkhorst_Pack(**kwargs):
       optional (default: true)
     displ : the displaced k-grid
     """
-    cell = _np.zeros((3,3),_np.int32)
-    if 'a' in kwargs: cell[0,0] = kwargs.pop('a')
-    if 'b' in kwargs: cell[1,1] = kwargs.pop('b')
-    if 'c' in kwargs: cell[2,2] = kwargs.pop('c')
+
+    # Initialize to Gamma-point
+    cell = _np.identity(3,_np.int32)
+
+    if 'a' in kwargs: cell[0,0] = int(kwargs.pop('a'))
+    if 'b' in kwargs: cell[1,1] = int(kwargs.pop('b'))
+    if 'c' in kwargs: cell[2,2] = int(kwargs.pop('c'))
     if 'cell' in kwargs: 
         # get the k-grid cell
         tcell = kwargs.pop('cell')
@@ -237,15 +263,15 @@ def Monkhorst_Pack(**kwargs):
             # (or at least a 3D cell)
             if len(tcell[0]) == 3:
                 # a true full cell has been given
-                cell = _np.copy(tcell)
+                cell = _np.copy(tcell,_np.int32)
             else:
                 raise KGridException("The given cell does not conform with the dimensionality, it must be a 3D cell")
         elif len(tcell.shape) == 1:
             # we expect a diagonal cell
             if len(tcell) == 3:
-                cell[0,0] = tcell[0]
-                cell[1,1] = tcell[1]
-                cell[2,2] = tcell[2]
+                cell[0,0] = int(tcell[0])
+                cell[1,1] = int(tcell[1])
+                cell[2,2] = int(tcell[2])
             else:
                 raise KGridException("The given cell does not conform with the dimensionality, it must be a 3D diagonal cell")
         else:
@@ -261,7 +287,10 @@ def Monkhorst_Pack(**kwargs):
     # start calculating the k-grid
 
     # number of k-points
-    nk = int(_np.linalg.det(cell))
+    d1 = cell[1,1] * cell[2,2] - cell[2,1] * cell[1,2]
+    d2 = cell[2,1] * cell[0,2] - cell[2,2] * cell[0,1]
+    d3 = cell[0,1] * cell[1,2] - cell[0,2] * cell[1,1]
+    nk = cell[0,0] * d1 + cell[0,1] * d2 + cell[0,2] * d3
 
     def rep(nk,**kwargs):
         tk = _np.arange(nk,dtype=_np.float64)[::-1]/nk+0.5/nk
@@ -295,6 +324,14 @@ def Monkhorst_Pack(**kwargs):
     else:
         # We default it to be true
         kpt = kpt.apply_time_reversal()
+
+    # For sure we will benefit from
+    # sorting the k-points
+    #print kpt.k.shape
+    #idx_sort = _np.lexsort((kpt.k[:,0],kpt.k[:,1],kpt.k[:,2]))[::-1]
+    #print idx_sort
+    #kpt.k[:,:] = kpt.k[idx_sort,0:3]
+    #kpt.w[:] = kpt.w[idx_sort]
     return kpt
 
 if __name__ == '__main__':
