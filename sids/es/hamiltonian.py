@@ -13,15 +13,15 @@ class Hamiltonian(object):
     Object for retaining information about the Hamiltonian matrix.
     """
 
-    def init_hamiltonian(self,has_overlap):
+    def init_hamiltonian(self,ortho):
         """ Initialize the object to the information given"
         
         Parameters
         ==========
-        has_overlap : tells the object that an overlap matrix is 
-                      accopanying the Hamilton. (i.e. non-orthogonal)
+        ortho : tells the object whether it has an overlap matrix
+                      accompanying the Hamilton. (i.e. non-orthogonal)
         """
-        self.has_overlap = has_overlap
+        self.ortho = ortho
         self.method = 'dense'
 
     def eigs(self,k=_np.zeros((3,),_np.float64),eigs=None,**kwargs):
@@ -40,11 +40,11 @@ class Hamiltonian(object):
                         'eigvals'     : eigs,
                         }
             # We utilize the dense method
-            if self.has_overlap:
+            if self.ortho:
+                H = self.todense(k=k)
+            else:
                 H,S = self.todense(k=k)
                 def_opts['b'] = S
-            else:
-                H = self.todense(k=k)
             # Update user-given options
             def_opts.update(kwargs)
 
@@ -67,11 +67,11 @@ class Hamiltonian(object):
                         'ncv' : neig*3, 
                         'return_eigenvectors' : False,
                         }
-            if self.has_overlap:
+            if self.ortho:
+                H = self.tosparse(k=k)
+            else:
                 H,S = self.tosparse(k=k)
                 def_opts['M'] = S
-            else:
-                H = self.tosparse(k=k)
             def_opts.update(kwargs)
             return _slin.eigsh(H,**def_opts)
             

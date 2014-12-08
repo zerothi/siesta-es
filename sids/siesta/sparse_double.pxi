@@ -367,3 +367,4 @@ cdef todense2_double_off(int is_gamma, int no_u,
                 d1v[io,jo].real = d1v[io,jo].real + m1v[ind] 
                 d2v[io,jo].real = d2v[io,jo].real + m2v[ind] 
     return d1,d2
+

@@ -9,7 +9,6 @@ import sids.es as _es
 import sids.helper.units as _unit
 import sids.k as _k
 import numpy as _np
-import scipy.sparse as _spar
 import sparse as spar
 
 class SparseMatrixError(Exception):
@@ -70,7 +69,7 @@ class SparseMatrix(_sim.SimulationFile):
                                      self.offset,self.s_ptr,self.s_col,m1,m2)
         return spar.tosparse(tk,self.no,
                              self.n_col,self.l_ptr,self.l_col,
-                             self.xij,self.s_ptr,self.s_col,m1,m2)
+                             self._xij,self.s_ptr,self.s_col,m1,m2)
 
     def _todense(self,k,m1,m2=None):
         """ Returns a dense matrix of this Hamiltonian at the specified
@@ -86,7 +85,7 @@ class SparseMatrix(_sim.SimulationFile):
                                     self.offset,m1,m2)
         return spar.todense(tk,self.no,
                             self.n_col,self.l_ptr,self.l_col,
-                            self.xij,m1,m2)
+                            self._xij,m1,m2)
 
     def _correct_sparsity(self):
         """ 
@@ -95,10 +94,10 @@ class SparseMatrix(_sim.SimulationFile):
         # Correct the xij array (remove xa[j]-xa[i])
         spar.xij_correct(self.na, self.xa, self.lasto,
                          self.no, self.n_col, self.l_ptr, self.l_col,
-                         self.xij)
+                         self._xij)
 
         # get transfer matrix sizes
-        tm = spar.xij_sc(self.rcell,self.nnzs,self.xij)
+        tm = spar.xij_sc(self.rcell,self.nnzs,self._xij)
 
         # Get the integer offsets for all supercells
         #ioffset = spar.get_isupercells(tm)
@@ -109,7 +108,7 @@ class SparseMatrix(_sim.SimulationFile):
 
         # Correct list_col (create the correct supercell index)
         spar.list_col_correct(self.rcell, self.no, self.nnzs, 
-                              self.l_col, self.xij, tm)
+                              self.l_col, self._xij, tm)
         
 
 class Hamiltonian(SparseMatrix,_es.Hamiltonian):
@@ -117,17 +116,23 @@ class Hamiltonian(SparseMatrix,_es.Hamiltonian):
     Hamiltonian formats.
     """
     # Default units (we convert in the FORTRAN routines)
-    _UNITS = _unit.Units('H','eV','xij','Ang')
+    _UNITS = _unit.Units('_H','eV','_xij','Ang')
+
+    def H(self,**kwargs):
+        if self.method == 'dense':
+            return self.todense(**kwargs)
+        else:
+            return self.tosparse(**kwargs)
 
     def tosparse(self,k=_np.zeros((3,),_np.float64),spin=0,name=None):
         """ Returns a sparse matrix of this Hamiltonian at the specified
         k-point"""
         if name is None:
-            return self._tosparse(k,self.H[spin,:],self.S)
+            return self._tosparse(k,self._H[spin,:],self._S)
         elif name == 'H':
-            return self._tosparse(k,self.H[spin,:])
+            return self._tosparse(k,self._H[spin,:])
         elif name == 'S':
-            return self._tosparse(k,self.S)
+            return self._tosparse(k,self._S)
         else:
             raise SparseMatrixError("Error in name")
 
@@ -135,11 +140,11 @@ class Hamiltonian(SparseMatrix,_es.Hamiltonian):
         """ Returns a dense matrix of this Hamiltonian at the specified
         k-point"""
         if name is None:
-            return self._todense(k,self.H[spin,:],self.S)
+            return self._todense(k,self._H[spin,:],self._S)
         elif name == 'H':
-            return self._todense(k,self.H[spin,:])
+            return self._todense(k,self._H[spin,:])
         elif name == 'S':
-            return self._todense(k,self.S)
+            return self._todense(k,self._S)
         else:
             raise Exception("Error in name")
 
@@ -148,7 +153,7 @@ class Hamiltonian(SparseMatrix,_es.Hamiltonian):
         """
 
         # Initialize the Hamiltonian object
-        self.init_hamiltonian(has_overlap=True)
+        self.init_hamiltonian(ortho=False)
 
         self.gamma,self.nspin, self.no, self.no_s, \
             self.nnzs = read_header(self.file_path)
@@ -169,17 +174,17 @@ class Hamiltonian(SparseMatrix,_es.Hamiltonian):
         self.l_col = _np.require(list_col,requirements=['C','A']) - 1 # correct numpy indices
         self.add_clean('l_col')
         del list_col
-        self.H = _np.require(H.T,requirements=['C','A'])
-        self.add_clean('H')
+        self._H = _np.require(H.T,requirements=['C','A'])
+        self.add_clean('_H')
         del H
-        self.H.shape = (self.nspin,self.nnzs)
-        self.S = _np.require(S,requirements=['C','A'])
-        self.add_clean('S')
+        self._H.shape = (self.nspin,self.nnzs)
+        self._S = _np.require(S,requirements=['C','A'])
+        self.add_clean('_S')
         del S
-        self.xij = _np.require(xij.T,requirements=['C','A'])
-        self.add_clean('xij')
+        self._xij = _np.require(xij.T,requirements=['C','A'])
+        self.add_clean('_xij')
         del xij
-        self.xij.shape = (self.nnzs,3)
+        self._xij.shape = (self.nnzs,3)
         # Done reading in information
 
         # If the simulation has the cell attached,
@@ -198,6 +203,14 @@ class HSX(Hamiltonian):
         """
         self.init_HSxij(_sio.read_hsx_header,_sio.read_hsx)
 
+class SE_HSX(_es.SelfEnergy,HSX):
+    """
+    A self-energy construct from the HSX file
+    """
+    def init_file(self):
+        super(HSX, self).init_file()
+        self.init_SE()
+
 class HS(Hamiltonian):
     """ The HS file that contains the Hamiltonian, overlap and
     xij
@@ -207,11 +220,21 @@ class HS(Hamiltonian):
         """
         self.init_HSxij(_sio.read_hs_header,_sio.read_hs)
 
+class SE_HS(_es.SelfEnergy,HS):
+    """
+    A self-energy construct from the HS file
+    """
+    def init_file(self):
+        super(HS, self).init_file()
+        self.init_SE()
+
 class TSHS(Hamiltonian):
     """ The TSHS file that contains the Hamiltonian, overlap and
     xij
     """
+
     _UNITS = _unit.Units('H','eV','cell','Ang','xa','Ang','Ef','eV')
+
     def init_file(self):
         """ Initialization of the TSHS file data type
         """
@@ -250,8 +273,14 @@ class TSHS(Hamiltonian):
         self._correct_sparsity()
         # Remove unneeded xij array.
         if 'offset' in self.__dict__:
-            del self.xij
-            self.remove_clean('xij')
+            del self._xij
+            self.remove_clean('_xij')
+
+class SE_TSHS(_es.SelfEnergy,TSHS):
+    """
+    A self-energy construct from the HS file
+    """
+    pass
 
 class DensityMatrix(SparseMatrix):
     """ A wrapper class to ease the construction of several

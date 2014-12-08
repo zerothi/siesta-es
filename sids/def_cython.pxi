@@ -119,6 +119,7 @@ cdef inline int uniqc(int no, int *a, int n, int* tmp) nogil:
 # Cython code that takes a SIESTA sparse
 # format and creates a matrix
 
+
 # Create the two available data types
 DINT = np.int32
 DLONG = np.int64

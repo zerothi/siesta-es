@@ -1,10 +1,13 @@
 #!python
 #cython: profile=False, cdivision=True, boundscheck=False, wraparound=False
 
+# The sparse methods are used in these included
+# files:
+#    sparse_double.pxi
+#    sparse_float.pxi
 import scipy.sparse as spar
 
 include "../def_cython.pxi"
-
 
 include "sparse_float.pxi"
 include "sparse_double.pxi"

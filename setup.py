@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-"""sids: Library to handle siesta and other dft programs in pure python.
+"""
+sids: Library to handle siesta and other dft programs in pure python.
 
 """
 

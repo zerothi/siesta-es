@@ -122,7 +122,7 @@ class Simulation(_unit.UnitObject):
             for f in self._files:
                 self.add_file(f)
 
-    def get_file(self,type):
+    def get_file(self,type,**opts):
         """Returns the type of file that is requested
         """
         if type in self._files:
@@ -147,7 +147,8 @@ class SimulationFile(_unit.UnitObject):
     _UNITS = _unit.Units()
 
     def __init__(self,path,sim=None,**kwargs):
-        """ Initialize a file under a DFT directory
+        """ 
+        Initialize a file under a DFT directory
         """
         self.sim = sim
         # if a rule exists in kwargs then it must 
@@ -158,6 +159,7 @@ class SimulationFile(_unit.UnitObject):
             self.file_type = kwargs['type']
         else:
             raise SimulationFileError("Type not declared **MUST** be declared")
+
         # Copy over path
         self.file_path = path
 

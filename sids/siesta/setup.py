@@ -10,7 +10,7 @@ def configuration(parent_package='',top_path=None):
     config.add_subpackage('fdf')
     # Add sparse library
     config.add_extension('sparse',sources=['sparse.c'],
-                         include_dirs=['.',np.get_include()])
+                         include_dirs=['.','..',np.get_include()])
     return config
 
 if __name__ == '__main__':
